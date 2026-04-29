@@ -22,96 +22,92 @@ interface CameraViewProps {
 }
 
 export const CameraView = forwardRef((props: CameraViewProps, ref) => {
-  // Canvas khusus untuk menangkap resolusi tinggi (OCR)
+  // Canvas terpisah khusus untuk capture resolusi tinggi
   const captureCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  const {
-    videoRef,
-    canvasRef, // Digunakan oleh useCameraCV untuk deteksi YOLO/Stability
-    phoneBox,
-  } = useCameraCV(
+  const { videoRef, canvasRef, phoneBox } = useCameraCV(
     props.isCVReady,
     props.isCapturing,
     props.onAutoCapture
   );
 
-  // --- Realtime Notification Bridge ---
   useEffect(() => {
     if (!props.onScanEvent) return;
     if (props.isCapturing) {
-      props.onScanEvent({
-        type: "CAPTURING",
-        message: "Menganalisis teks bukti bayar...",
-      });
+      props.onScanEvent({ type: "CAPTURING", message: "Menganalisis teks bukti bayar..." });
     }
   }, [props.isCapturing, props.onScanEvent]);
 
   useEffect(() => {
     if (!props.onScanEvent || !phoneBox) return;
-    props.onScanEvent({
-      type: "DETECTED",
-      message: "Bukti bayar terdeteksi",
-    });
+    props.onScanEvent({ type: "DETECTED", message: "Bukti bayar terdeteksi" });
   }, [phoneBox, props.onScanEvent]);
 
-  /**
-   * METHOD capture()
-   * Dioptimalkan untuk menghasilkan gambar PNG High-Res.
-   */
+  // ============================================================
+  // METHOD capture() — Single Clean Frame
+  //
+  // Bug #3 fix: Hapus brightness(1.05) dan frame averaging.
+  // Frame averaging menyebabkan gambar overexposed (terlalu terang)
+  // karena frame di-overlay satu di atas yang lain tanpa reset canvas.
+  // 
+  // Solusi: ambil 1 frame bersih langsung dari video element pada
+  // resolusi native-nya. OpenCV.js yang akan handle preprocessing.
+  // ============================================================
   useImperativeHandle(ref, () => ({
-    // Di dalam useImperativeHandle pada CameraView.tsx
-        capture: () => {
-  const video = videoRef.current;
-  const canvas = captureCanvasRef.current;
+    capture: async (): Promise<Blob | null> => {
+      const video = videoRef.current;
+      const canvas = captureCanvasRef.current;
 
-  // Pastikan video sudah memiliki dimensi yang valid
-  if (!video || !canvas || video.videoWidth === 0) {
-    console.error("📸 [CameraView] Video dimensions are 0. Capture aborted.");
-    return null;
-  }
+      if (!video || !canvas || video.videoWidth === 0) {
+        console.error("📸 [CameraView] Video tidak siap, capture dibatalkan.");
+        return null;
+      }
 
-  // 1. SET RESOLUSI BERDASARKAN SOURCE ASLI (Misal 1080p atau 4K)
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+      // Gunakan resolusi native video (1080p jika tersedia)
+      const W = video.videoWidth;
+      const H = video.videoHeight;
 
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return null;
+      canvas.width = W;
+      canvas.height = H;
 
-  // 2. PRE-PROCESSING RINGAN
-  // Hilangkan filter yang terlalu ekstrem, cukup grayscale & sedikit kontras
-  ctx.filter = "grayscale(1) contrast(1.1)";
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  ctx.filter = "none";
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return null;
 
-  console.log(`📸 [CameraView] Capturing at: ${canvas.width}x${canvas.height}`);
+      // Reset total canvas sebelum gambar (PENTING: cegah sisa frame lama)
+      ctx.clearRect(0, 0, W, H);
 
-  // 3. PNG TANPA KOMPRESI (Agar teks tidak pecah)
-  return new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((blob) => {
-      resolve(blob);
-    }, "image/png");
-  });
-},
+      // Ambil 1 frame bersih langsung dari video — tanpa filter apapun.
+      // Preprocessing (grayscale, threshold) dilakukan di ocr-logic.ts via OpenCV.js
+      ctx.globalAlpha = 1.0;
+      ctx.filter = "none";
+      ctx.drawImage(video, 0, 0, W, H);
+
+      console.log(`📸 [CameraView] Captured: ${W}x${H}`);
+
+      // Export PNG tanpa kompresi agar teks tidak pecah saat di-OCR
+      return new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/png");
+      });
+    },
   }));
 
   return (
     <div className="relative w-full h-[420px] rounded-2xl overflow-hidden bg-black shadow-inner">
-      {/* VIDEO ELEMENT */}
+      {/* VIDEO ELEMENT: Preview langsung dari kamera, tidak diproses */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 w-full h-full object-cover -scale-x-100 transition-opacity duration-700 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
           props.isCVReady ? "opacity-100" : "opacity-40"
         }`}
       />
 
-      {/* HIDDEN CANVASES */}
-      {/* Canvas 1: Untuk deteksi real-time di useCameraCV */}
-      <canvas ref={canvasRef} className="hidden" /> 
-      
-      {/* Canvas 2: Untuk capture final kualitas tinggi */}
+      {/* HIDDEN CANVAS 1: Canvas kecil (320x240) untuk detection loop */}
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* HIDDEN CANVAS 2: Canvas full-res untuk capture final */}
       <canvas ref={captureCanvasRef} className="hidden" />
 
       {/* OVERLAY UI */}

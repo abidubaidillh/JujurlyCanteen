@@ -14,9 +14,11 @@ def upload_and_insert_db(file_path: str, file_name: str):
             supabase.storage.from_("bukti-transfer").upload(f"public/{file_name}", f)
         
         # 2. Insert ke Database (Memicu Realtime di Next.js)
+        # Status "invalid" = default sementara, akan di-update oleh OCR di Next.js
+        # CATATAN: Check constraint hanya menerima "valid" atau "invalid"
         data = supabase.table("bukti_pembayaran").insert({
             "file_gambar": f"public/{file_name}",
-            "status": "pending" 
+            "status": "invalid"
         }).execute()
         
         return True
