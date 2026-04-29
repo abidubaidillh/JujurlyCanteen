@@ -2,7 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect, useCallback } from "react";
-import { uploadAndSaveTransaction } from "./supabase-logic";
+// Pastikan mengimpor semua fungsi yang dibutuhkan dari supabase-logic
+import { 
+  supabase, 
+  uploadAndSaveTransaction, 
+  updateOCRResult, 
+  getPublicImageUrl 
+} from "./supabase-logic";
 import { performOCR } from "./ocr-logic"; 
 import Footer from "../../components/layout/Footer";
 import { CameraSection } from "./components/CameraSection";
@@ -22,6 +28,9 @@ export default function ScanPage() {
   const [isOpenCVReady, setIsOpenCVReady] = useState(false);
   const [status, setStatus] = useState("Menyiapkan Engine CV...");
   const [cameraPermission, setCameraPermission] = useState<"checking" | "granted" | "denied">("checking");
+  
+  // 🔥 STATE BARU UNTUK MODE CLOUD REALTIME
+  const [isAutoMode, setIsAutoMode] = useState(false);
 
   const requestCamera = async () => {
     try {
@@ -54,9 +63,9 @@ export default function ScanPage() {
     return () => clearInterval(interval);
   }, [cameraPermission]);
 
-  /**
-   * LOGIC: Handle Capture & OCR Processing
-   */
+  // ==========================================
+  // LOGIC 1: MANUAL CAPTURE (DARI BROWSER)
+  // ==========================================
   const onCapture = useCallback(async () => {
     if (isCapturing || cameraPermission !== "granted" || !isOpenCVReady) return;
 
@@ -67,15 +76,8 @@ export default function ScanPage() {
     setStatus("Menganalisis Teks (OCR)...");
 
     try {
-      console.log("🚀 [OCR] Memulai ekstraksi teks lokal...");
-      
-      // 2. Ekstraksi Teks menggunakan Tesseract.js
+      console.log("🚀 [OCR] Memulai ekstraksi teks dari kamera...");
       const ocrResult = await performOCR(blob);
-      
-      // --- DEBUG LOG UNTUK KONSOL ---
-      console.log("📝 [OCR RAW]:", ocrResult.rawText);
-      console.log("💰 [OCR AMOUNT]:", ocrResult.amount);
-      console.log("🏢 [OCR MERCHANT]:", ocrResult.merchantName);
 
       if (ocrResult?.isSuccess) {
         setStatus(`✅ Terdeteksi Rp${ocrResult.amount?.toLocaleString('id-ID')}...`);
@@ -84,11 +86,10 @@ export default function ScanPage() {
         setStatus(ocrResult.error || "Nominal tidak terbaca, menyimpan gambar...");
       }
 
-      // 3. Simpan ke Supabase (Blob Gambar + Nominal hasil OCR)
-      await uploadAndSaveTransaction(blob, ocrResult?.amount);
+      // Hanya kirim amount jika OCR sukses (termasuk validasi merchant)
+      await uploadAndSaveTransaction(blob, ocrResult?.isSuccess ? ocrResult.amount : null);
 
       setStatus("Berhasil! Mengalihkan...");
-
       setTimeout(() => {
         router.push("/");
         router.refresh();
@@ -99,6 +100,89 @@ export default function ScanPage() {
       setIsCapturing(false);
     }
   }, [isCapturing, cameraPermission, isOpenCVReady, router]);
+
+  // ==========================================
+  // LOGIC 2: SUPABASE REALTIME (AUTO DARI PYTHON)
+  // ==========================================
+  
+  const processSupabaseImage = async (newRecord: any) => {
+    setIsCapturing(true);
+    try {
+      setStatus("⬇️ Data baru masuk! Memproses URL gambar...");
+      console.log("Record baru dari DB:", newRecord);
+
+      // 1. Ubah path dari DB menjadi URL asli Supabase Storage
+      const dbImagePath = newRecord.file_gambar; 
+      const publicUrl = getPublicImageUrl(dbImagePath);
+      
+      console.log("🔗 Mengunduh gambar dari:", publicUrl);
+
+      // 2. Fetch gambar dari URL Storage
+      const response = await fetch(publicUrl);
+      if (!response.ok) throw new Error("Gagal mengunduh gambar dari Storage");
+      const blob = await response.blob();
+
+      // 3. Jalankan OCR
+      setStatus("🔍 Menganalisis Teks (OCR)...");
+      const ocrResult = await performOCR(blob);
+      console.log("📝 Hasil OCR:", ocrResult);
+
+      // Gunakan id_bukti atau id (sesuaikan dengan nama Primary Key di tabelmu)
+      const recordId = newRecord.id_bukti || newRecord.id;
+
+      // 4. Simpan hasil nominal kembali ke Database (tabel transaksi & bukti_pembayaran)
+      if (ocrResult.isSuccess) {
+        setStatus(`✅ Berhasil! Terdeteksi Rp${ocrResult.amount?.toLocaleString('id-ID')}`);
+        await updateOCRResult(recordId, ocrResult.amount);
+      } else {
+        setStatus(`⚠️ OCR Gagal: ${ocrResult.error}`);
+        await updateOCRResult(recordId, null);
+      }
+
+      // Reset state untuk menunggu gambar berikutnya
+      setTimeout(() => {
+        setStatus("🎧 Menunggu scan berikutnya...");
+        setIsCapturing(false);
+      }, 3000);
+
+    } catch (error) {
+      console.error("❌ Gagal memproses gambar Supabase:", error);
+      setStatus("❌ Terjadi kesalahan saat mengunduh/memproses.");
+      setIsCapturing(false);
+    }
+  };
+
+  useEffect(() => {
+    let channel: any;
+
+    if (isAutoMode) {
+      setStatus("🎧 Mendengarkan tabel 'bukti_pembayaran'...");
+      
+      channel = supabase
+        .channel('custom-insert-channel')
+        .on(
+          'postgres_changes',
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'bukti_pembayaran' 
+          },
+          (payload) => {
+            console.log("🔥 TRIGGER REALTIME!", payload.new);
+            processSupabaseImage(payload.new);
+          }
+        )
+        .subscribe((subscribeStatus) => {
+          if (subscribeStatus === 'SUBSCRIBED') {
+            console.log('✅ Realtime tersambung ke tabel bukti_pembayaran');
+          }
+        });
+    }
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [isAutoMode]);
 
   return (
     <div className="min-h-screen bg-[#F7F8FC] flex flex-col">
@@ -119,6 +203,35 @@ export default function ScanPage() {
           <div className="flex flex-col gap-5">
             <TipsPanel />
             
+            {/* --- PANEL DEBUG: SUPABASE REALTIME CLOUD MODE --- */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                  Integrasi Cloud (AI)
+                </h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                {isAutoMode 
+                  ? "Sistem sedang mendengarkan database. Silakan scan QRIS menggunakan kamera eksternal (AI)."
+                  : "Aktifkan mode ini jika Anda menggunakan kamera AI eksternal untuk deteksi otomatis."}
+              </p>
+
+              <button 
+                onClick={() => setIsAutoMode(!isAutoMode)}
+                disabled={isCapturing}
+                className={`w-full text-sm font-bold py-3 rounded-xl transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed ${
+                  isAutoMode 
+                    ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100" 
+                    : "bg-[#2B4C7E] text-white hover:bg-[#1e3659]"
+                }`}
+              >
+                {isCapturing 
+                  ? "Memproses Data..." 
+                  : (isAutoMode ? "🛑 Hentikan Mode Cloud" : "▶️ Mulai Mode Cloud")}
+              </button>
+            </div>
+            {/* ------------------------------------------------ */}
+
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mt-auto">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">

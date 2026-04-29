@@ -16,12 +16,13 @@ export const useStability = (onStable: () => void) => {
 
   const hasTriggeredRef = useRef<boolean>(false);
 
-  const REQUIRED_STABLE_DURATION = 2500;
-  const DETECTION_TIMEOUT = 700;
-  const MOVEMENT_THRESHOLD = 40;
+  const REQUIRED_STABLE_DURATION = 1000;
+  const DETECTION_TIMEOUT = 1200;
+  const MOVEMENT_THRESHOLD = 90;
 
   const CONF_THRESHOLD = 0.6;
-  const SHARPNESS_THRESHOLD = 35;
+  // 🔥 FIX: Turunkan threshold agar lebih mudah capture tanpa harus terlalu diam
+  const SHARPNESS_THRESHOLD = 65;
 
   const isStableBox = (prev: PhoneBox | null, curr: PhoneBox) => {
     if (!prev) return false;
@@ -52,7 +53,6 @@ export const useStability = (onStable: () => void) => {
       hasTriggered: hasTriggeredRef.current,
     });
 
-    // 🔥 FIX UTAMA: WAJIB ADA BOX
     if (
       detected &&
       box &&
@@ -82,7 +82,6 @@ export const useStability = (onStable: () => void) => {
         console.log("📸 FINAL TRIGGER");
 
         hasTriggeredRef.current = true;
-
         stableStartRef.current = null;
         lastBoxRef.current = null;
 
@@ -98,7 +97,6 @@ export const useStability = (onStable: () => void) => {
 
   const reset = () => {
     console.log("♻️ RESET STABILITY");
-
     hasTriggeredRef.current = false;
     stableStartRef.current = null;
     lastBoxRef.current = null;

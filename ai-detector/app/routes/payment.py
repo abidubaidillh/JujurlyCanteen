@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File
 import cv2
 import numpy as np
 import os
+from supabase import create_client, Client # 🔥 Import Supabase
 
 from app.services.detector import detect_best_screen
 from app.services.yolo_service import detect_phone_boxes
@@ -12,6 +13,13 @@ router = APIRouter()
 
 OUTPUT_DIR = "output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# 🔥 KONFIGURASI SUPABASE (Pastikan URL dan Key diisi dengan milikmu!)
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://wwovpyyynxpyrvljadtk.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3b3ZweXl5bnhweXJ2bGphZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNTYwNjAsImV4cCI6MjA5MTgzMjA2MH0.17vqZxZg6zjM_gVmCdSSBl30mJmHNAkHJummlQU8YOI")
+
+# Inisialisasi client Supabase
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 🔥 runtime lock
 HAS_CAPTURED = False
@@ -97,7 +105,7 @@ async def detect_payment_screen(file: UploadFile = File(...)):
 
 
 # =========================
-# CAPTURE + SAVE IMAGE
+# CAPTURE + SAVE TO SUPABASE
 # =========================
 @router.post("/capture-payment")
 async def capture_payment(file: UploadFile = File(...)):
@@ -130,14 +138,37 @@ async def capture_payment(file: UploadFile = File(...)):
         # =========================
         final_image = enhance_image(final_image)
 
-        filename = f"payment_{ts()}.jpg"
+        filename = f"bukti_{ts()}.jpg" # Menggunakan format nama yang sama dengan sistemmu
         save_path = os.path.join(OUTPUT_DIR, filename)
 
+        # 1. Simpan ke folder lokal sebagai backup
         cv2.imwrite(save_path, final_image)
+        print(f"[CAPTURE] Tersimpan lokal di: {save_path}")
+
+        # 2. 🔥 UPLOAD KE SUPABASE
+        try:
+            print("[SUPABASE] Sedang mengunggah ke Cloud...")
+            # Upload file fisik ke Storage 'bukti-transfer'
+            with open(save_path, 'rb') as f:
+                supabase.storage.from_("bukti-transfer").upload(f"public/{filename}", f)
+            
+            # Insert baris ke Database (Ini yang memicu Realtime di Next.js!)
+            supabase.table("bukti_pembayaran").insert({
+                "file_gambar": f"public/{filename}",
+                "status": "pending"
+            }).execute()
+            
+            print(f"[SUPABASE] ✅ Berhasil upload dan trigger Realtime!")
+        except Exception as sb_error:
+            print("[ERROR SUPABASE] Gagal upload:", str(sb_error))
+            # Jika gagal upload ke Supabase, lepaskan lock agar bisa mencoba lagi
+            return {
+                "success": False,
+                "status": "supabase_error",
+                "message": str(sb_error)
+            }
 
         HAS_CAPTURED = True
-
-        print(f"[CAPTURE] Saved: {filename}")
 
         return {
             "success": True,
