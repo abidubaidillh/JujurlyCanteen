@@ -9,6 +9,7 @@ import { getPublicImageUrl } from "./supabase-logic";
 import { VscServerProcess } from "react-icons/vsc";
 import { TbLineScan } from "react-icons/tb";
 import { AiOutlineFileDone } from "react-icons/ai";
+import Mascot from "../../components/ui/Mascot";
 
 
 // ============================================================
@@ -86,26 +87,6 @@ function PageStepper({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function RobotMascot({ mood }: { mood: "scan" | "focus" }) {
-  return (
-    <div className="select-none inline-flex flex-col items-center">
-      <div className="w-12 h-10 bg-white rounded-xl border-2 border-blue-200 shadow flex items-center justify-center relative">
-        <span className="text-base font-black text-blue-600 tracking-widest">
-          {mood === "scan" ? "o o" : "> <"}
-        </span>
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-1 h-2.5 bg-blue-400 rounded-full" />
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full" />
-        {mood === "scan" && (
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full animate-ping opacity-75" />
-        )}
-      </div>
-      <div className="w-9 h-7 bg-blue-50 border-2 border-blue-200 rounded-b-xl flex items-center justify-center mt-0.5">
-        <div className="w-3.5 h-1 bg-blue-300 rounded-full" />
-      </div>
     </div>
   );
 }
@@ -192,6 +173,7 @@ export default function ScanPage() {
   const onBack = useCallback(() => router.back(), [router]);
 
   // ============================================================
+  // RENDER===========================================================
   // RENDER
   // ============================================================
   return (
@@ -295,10 +277,8 @@ export default function ScanPage() {
                   isCapturing={isCapturing}
                   isOpenCVReady={isOpenCVReady}
                   cameraPermission={cameraPermission}
-                  onCapture={onCapture}
                   onAutoCapture={handleBackendResponse}
                   onRetryPermission={requestCamera}
-                  onBack={onBack}
                 />
               </div>
             </div>
@@ -352,9 +332,9 @@ export default function ScanPage() {
 
       </main>
 
-      {/* MASKOT — fixed pojok kanan bawah, ekspresi sesuai mode */}
+      {/* MASKOT — fixed pojok kanan bawah */}
       <div className="fixed bottom-20 right-6 z-40">
-        <RobotMascot mood={previewData ? "focus" : "scan"} />
+        <Mascot />
       </div>
 
       <footer className="fixed bottom-0 left-0 w-full z-50">

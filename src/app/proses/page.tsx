@@ -3,13 +3,12 @@
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
+import Image from "next/image";
 import Footer from "../../components/layout/Footer";
-<<<<<<< HEAD
+import Mascot from "../../components/ui/Mascot";
 import { TbLineScan } from "react-icons/tb";
 import { VscServerProcess } from "react-icons/vsc";
 import { AiOutlineFileDone } from "react-icons/ai";
-=======
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
 import {
   getPublicImageUrl,
   saveOCRResult,
@@ -34,7 +33,6 @@ const STEPS: Record<Step, StepInfo> = {
 // ============================================================
 // STEPPER
 // ============================================================
-<<<<<<< HEAD
 function PageStepper({
   active,
 }: {
@@ -90,26 +88,6 @@ function PageStepper({
           </div>
         );
       })}
-=======
-function PageStepper({ active }: { active: "scan" | "proses" | "hasil" }) {
-  const steps = [{ key: "scan", label: "Scan" }, { key: "proses", label: "Proses" }, { key: "hasil", label: "Hasil" }];
-  const activeIdx = steps.findIndex((s) => s.key === active);
-  return (
-    <div className="flex items-center gap-1">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-1">
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-            i < activeIdx ? "bg-blue-600 text-white" :
-            i === activeIdx ? "bg-blue-100 text-blue-600 ring-2 ring-blue-300" :
-            "bg-gray-100 text-gray-400"
-          }`}>
-            {i < activeIdx && <span>✓</span>}
-            {s.label}
-          </div>
-          {i < steps.length - 1 && <div className={`w-5 h-0.5 ${i < activeIdx ? "bg-blue-600" : "bg-gray-200"}`} />}
-        </div>
-      ))}
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
     </div>
   );
 }
@@ -238,17 +216,17 @@ export default function ProsesPage({
       <header className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+              <Image src="/logo.png" alt="Logo Jujurly" width={15} height={20} className="object-contain" />
             </div>
-            <span className="font-bold text-blue-900 text-sm">Jujurly Canteen System</span>
+            <span className="font-bold text-[#2B4C7E] text-base sm:text-lg">Jujurly Canteen System</span>
           </div>
           <PageStepper active="proses" />
-          <span className="text-xs font-semibold text-blue-400">KWU • HMIT</span>
+          <span className="text-xs sm:text-sm font-bold text-[#2B4C7E]">
+            KWU <span className="text-yellow-400">●</span> HMIT
+          </span>
         </div>
-        <div className="h-[3px] bg-blue-600" />
+        <div className="h-[3px] bg-[#487ADB]" />
       </header>
 
       {/* MAIN */}
@@ -380,7 +358,7 @@ export default function ProsesPage({
 
       {/* MASKOT — fixed pojok kanan bawah */}
       <div className="fixed bottom-20 right-6 z-40">
-        <RobotFocus />
+        <Mascot />
       </div>
 
       <footer className="fixed bottom-0 left-0 w-full z-50">

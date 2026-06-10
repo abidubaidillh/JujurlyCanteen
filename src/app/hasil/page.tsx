@@ -2,7 +2,9 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Footer from "../../components/layout/Footer";
+import Mascot from "../../components/ui/Mascot";
 
 // ============================================================
 // STEPPER
@@ -83,17 +85,17 @@ export default function HasilPage({
       <header className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+              <Image src="/logo.png" alt="Logo Jujurly" width={15} height={20} className="object-contain" />
             </div>
-            <span className="font-bold text-blue-900 text-sm">Jujurly Canteen System</span>
+            <span className="font-bold text-[#2B4C7E] text-base sm:text-lg">Jujurly Canteen System</span>
           </div>
           <PageStepper active="hasil" />
-          <span className="text-xs font-semibold text-blue-400">KWU • HMIT</span>
+          <span className="text-xs sm:text-sm font-bold text-[#2B4C7E]">
+            KWU <span className="text-yellow-400">●</span> HMIT
+          </span>
         </div>
-        <div className="h-[3px] bg-blue-600" />
+        <div className="h-[3px] bg-[#487ADB]" />
       </header>
 
       {/* MAIN */}
@@ -195,7 +197,7 @@ export default function HasilPage({
 
       {/* MASKOT — fixed pojok kanan bawah */}
       <div className="fixed bottom-20 right-6 z-40">
-        <RobotHappy />
+        <Mascot />
       </div>
 
       <footer className="fixed bottom-0 left-0 w-full z-50">

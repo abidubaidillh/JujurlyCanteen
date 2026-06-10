@@ -98,14 +98,14 @@ export const CameraView = forwardRef((props: CameraViewProps, ref) => {
   // RENDER
   // ============================================================
   return (
-    <div className="relative w-full h-[420px] rounded-2xl overflow-hidden bg-black shadow-inner">
+    <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-black shadow-inner">
       {/* VIDEO — mirror hanya di level presentasi, frame data tetap normal */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 scale-x-[-1] ${
+        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-700 scale-x-[-1] ${
           props.isCVReady ? "opacity-100" : "opacity-40"
         }`}
       />
