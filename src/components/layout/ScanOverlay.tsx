@@ -34,11 +34,7 @@ export const ScanOverlay = ({
     : isDenied
       ? "bg-red-500/80 shadow-lg"
       : isStable
-<<<<<<< HEAD
         ? "bg-yellow-500/40 shadow-lg"
-=======
-        ? "bg-green-500/40 shadow-lg"
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
         : "bg-[#5EBA59]/30";
 
   const topStatusText = isCapturing
@@ -52,11 +48,7 @@ export const ScanOverlay = ({
   const frameClass = isCapturing
     ? "border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)] scale-95"
     : isStable
-<<<<<<< HEAD
       ? "border-yellow-400 shadow-[0_0_30px_rgba(34,197,94,0.5)] scale-100"
-=======
-      ? "border-green-400 shadow-[0_0_30px_rgba(34,197,94,0.5)] scale-100"
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
       : isDenied
         ? "border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
         : "border-[#487ADB]/60 shadow-[0_0_20px_rgba(72,122,219,0.3)]";

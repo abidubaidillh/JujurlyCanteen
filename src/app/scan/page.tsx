@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect, useCallback } from "react";
-<<<<<<< HEAD
 import Image from "next/image";
 import Footer from "../../components/layout/Footer";
 import { CameraSection } from "./components/CameraSection";
@@ -11,11 +10,6 @@ import { VscServerProcess } from "react-icons/vsc";
 import { TbLineScan } from "react-icons/tb";
 import { AiOutlineFileDone } from "react-icons/ai";
 
-=======
-import Footer from "../../components/layout/Footer";
-import { CameraSection } from "./components/CameraSection";
-import { getPublicImageUrl } from "./supabase-logic";
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
 
 // ============================================================
 // HELPERS — tidak diubah
@@ -37,7 +31,6 @@ interface PreviewData {
 // ============================================================
 // SUB-COMPONENTS
 // ============================================================
-<<<<<<< HEAD
 function PageStepper({
   active,
 }: {
@@ -93,32 +86,6 @@ function PageStepper({
           </div>
         );
       })}
-=======
-function PageStepper({ active }: { active: "scan" | "proses" | "hasil" }) {
-  const steps = [
-    { key: "scan",  label: "Scan"  },
-    { key: "proses", label: "Proses" },
-    { key: "hasil",  label: "Hasil"  },
-  ];
-  const activeIdx = steps.findIndex((s) => s.key === active);
-  return (
-    <div className="flex items-center gap-1">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-1">
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-            i < activeIdx  ? "bg-blue-600 text-white" :
-            i === activeIdx ? "bg-blue-100 text-blue-600 ring-2 ring-blue-300" :
-                              "bg-gray-100 text-gray-400"
-          }`}>
-            {i < activeIdx && <span>✓</span>}
-            {s.label}
-          </div>
-          {i < steps.length - 1 && (
-            <div className={`w-5 h-0.5 ${i < activeIdx ? "bg-blue-600" : "bg-gray-200"}`} />
-          )}
-        </div>
-      ))}
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
     </div>
   );
 }
@@ -160,11 +127,7 @@ export default function ScanPage() {
   }, []);
 
   const [isOpenCVReady, setIsOpenCVReady] = useState(false);
-<<<<<<< HEAD
   const [status, setStatus] = useState("Menyiapkan Engine OpenCV");
-=======
-  const [status, setStatus] = useState("Menyiapkan Engine CV...");
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
   const [cameraPermission, setCameraPermission] = useState<"checking" | "granted" | "denied">("checking");
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
 
@@ -189,11 +152,7 @@ export default function ScanPage() {
     const interval = setInterval(() => {
       if ((window as any).cv?.Mat) {
         setIsOpenCVReady(true);
-<<<<<<< HEAD
         if (cameraPermission === "granted") setStatus("Kamera Aktif");
-=======
-        if (cameraPermission === "granted") setStatus("📷 Kamera Aktif");
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
         clearInterval(interval);
       }
     }, 500);
@@ -209,21 +168,13 @@ export default function ScanPage() {
     const cleanFilePath = (file_path as string).replace(/^\/+/, "");
     const imageUrl = public_url || getPublicImageUrl(cleanFilePath);
     setPreviewData({ id_bukti: String(id_bukti), file_path: cleanFilePath, public_url: public_url ?? "", imageUrl });
-<<<<<<< HEAD
     setStatus("Foto berhasil diambil");
-=======
-    setStatus("📸 Foto berhasil diambil");
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
   }, [setIsCapturingSync]);
 
   const handleRetake = useCallback(() => {
     setPreviewData(null);
     setIsCapturingSync(false);
-<<<<<<< HEAD
     setStatus("Kamera Aktif");
-=======
-    setStatus("📷 Kamera Aktif");
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
     resetCaptureLock();
   }, [setIsCapturingSync]);
 
@@ -248,7 +199,6 @@ export default function ScanPage() {
 
       {/* HEADER */}
       <header className="bg-white border-b border-gray-100 shadow-sm">
-<<<<<<< HEAD
         <div className="max-w-7xl mx-auto px-5 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
@@ -266,25 +216,6 @@ export default function ScanPage() {
 
       {/* MAIN */}
       <main className="flex-grow flex items-center justify-center px-5 py-5 pb-25">
-=======
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <span className="font-bold text-blue-900 text-sm">Jujurly Canteen System</span>
-          </div>
-          <PageStepper active="scan" />
-          <span className="text-xs font-semibold text-blue-400">KWU • HMIT</span>
-        </div>
-        <div className="h-[3px] bg-blue-600" />
-      </header>
-
-      {/* MAIN */}
-      <main className="flex-grow flex items-center justify-center px-6 py-8 pb-28">
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
 
         {previewData ? (
           /* ================================================
@@ -350,7 +281,6 @@ export default function ScanPage() {
           /* ================================================
            * MODE A: KAMERA AKTIF
            * ============================================== */
-<<<<<<< HEAD
           <div className="w-full max-w-5xl grid lg:grid-cols-[1fr_280px] gap-16 items-start">
 
             {/* Kolom kiri — camera frame */}
@@ -359,32 +289,6 @@ export default function ScanPage() {
               {/* Camera frame */}
               <div className="relative rounded-3xl overflow-hidden shadow-xl">
                 {/* Corner accents */}
-=======
-          <div className="w-full max-w-4xl grid lg:grid-cols-[1fr_280px] gap-16 items-start">
-
-            {/* Kolom kiri — camera frame */}
-            <div className="flex flex-col gap-3">
-              {/* Status pill + batal */}
-              <div className="flex items-center justify-between">
-                <div className={`inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full ${
-                  isOpenCVReady ? "bg-blue-100 text-blue-600" : "bg-yellow-100 text-yellow-600"
-                }`}>
-                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isOpenCVReady ? "bg-blue-500" : "bg-yellow-500"}`} />
-                  {status}
-                </div>
-                <button onClick={onBack} className="text-xs text-gray-400 hover:text-gray-600 font-semibold transition-colors">
-                  ✕ Batal
-                </button>
-              </div>
-
-              {/* Camera frame */}
-              <div className="relative bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-800">
-                {/* Corner accents */}
-                <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-blue-400 rounded-tl-md z-10 pointer-events-none" />
-                <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-blue-400 rounded-tr-md z-10 pointer-events-none" />
-                <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-blue-400 rounded-bl-md z-10 pointer-events-none" />
-                <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-blue-400 rounded-br-md z-10 pointer-events-none" />
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
                 <CameraSection
                   cameraRef={cameraRef}
                   status={status}

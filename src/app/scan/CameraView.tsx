@@ -67,11 +67,7 @@ export const CameraView = forwardRef((props: CameraViewProps, ref) => {
       const canvas = captureCanvasRef.current;
 
       if (!video || !canvas || video.videoWidth === 0) {
-<<<<<<< HEAD
         console.error("[CameraView] Video tidak siap.");
-=======
-        console.error("📸 [CameraView] Video tidak siap.");
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
         return null;
       }
 
@@ -90,11 +86,7 @@ export const CameraView = forwardRef((props: CameraViewProps, ref) => {
       ctx.filter = "none";
       ctx.drawImage(video, 0, 0, W, H);
 
-<<<<<<< HEAD
       console.log(`[CameraView] Captured: ${W}x${H}`);
-=======
-      console.log(`📸 [CameraView] Captured: ${W}x${H}`);
->>>>>>> cf6c3ba117aebbffaff69a214ab9071a4e84e33d
 
       return new Promise<Blob | null>((resolve) => {
         canvas.toBlob((blob) => resolve(blob), "image/png");
