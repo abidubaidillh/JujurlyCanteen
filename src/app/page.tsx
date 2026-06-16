@@ -36,9 +36,18 @@ export default function Home() {
               Jujurly Canteen System
             </span>
           </div>
-          <span className="text-xs sm:text-sm font-bold text-[#2B4C7E]">
-            KWU <span className="text-yellow-400">●</span> HMIT
-          </span>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <span className="text-xs sm:text-sm font-bold text-[#2B4C7E]">
+              KWU <span className="text-yellow-400">●</span> HMIT
+            </span>
+            <a href="/admin/login" title="Admin Login" className="flex items-center">
+              <img
+                src="/login_icon.png"
+                alt="Admin"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full aspect-square object-cover transition-all duration-200 hover:scale-105 hover:opacity-90 shadow-sm"
+              />
+            </a>
+          </div>
         </div>
         <div className="h-[3px] bg-[#487ADB]" />
       </header>
