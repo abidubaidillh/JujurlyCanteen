@@ -9,7 +9,7 @@ import { getPublicImageUrl } from "./supabase-logic";
 import { VscServerProcess } from "react-icons/vsc";
 import { TbLineScan } from "react-icons/tb";
 import { AiOutlineFileDone } from "react-icons/ai";
-import Mascot from "../../components/ui/Mascot";
+import MascotScan from "../../components/ui/Mascot_Scan";
 
 
 // ============================================================
@@ -334,7 +334,7 @@ export default function ScanPage() {
 
       {/* MASKOT — fixed pojok kanan bawah */}
       <div className="fixed bottom-20 right-6 z-40">
-        <Mascot />
+        <MascotScan />
       </div>
 
       <footer className="fixed bottom-0 left-0 w-full z-50">

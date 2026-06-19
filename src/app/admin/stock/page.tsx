@@ -1,82 +1,34 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { supabase } from "../../scan/supabase-logic";
 import {
-  HiHome,
-  HiUser,
   HiMagnifyingGlass,
   HiPlus,
   HiPencil,
   HiTrash,
   HiXMark,
+  HiCheckCircle,
+  HiExclamationCircle,
 } from "react-icons/hi2";
-import NotifBell from "../../../components/ui/NotifBell";
+import AdminHeader from "../../../components/admin/AdminHeader";
 
-// ─── Sidebar ───────────────────────────────────────────────────────────────
+// ─── Zod Schema ────────────────────────────────────────────────────────────
 
-type NavItem = { label: string; active: boolean; href: string; imgSrc?: string };
+const stockSchema = z.object({
+  nama_barang: z.string().min(1, "Nama barang wajib diisi").max(100, "Nama barang terlalu panjang").trim(),
+  kategori: z.enum(["Makanan", "Minuman"]),
+  harga: z.number({ error: "Harga harus berupa angka" }).positive("Harga harus lebih dari 0"),
+  stok_tersedia: z.number({ error: "Stok harus berupa angka" }).min(0, "Stok tidak boleh negatif").int("Stok harus bilangan bulat"),
+});
 
-const navItems: NavItem[] = [
-  { label: "Dashboard",   active: false, href: "/admin/dashboard" },
-  { label: "Stock",       active: true,  href: "/admin/stock",       imgSrc: "/stock.png" },
-  { label: "Transaction", active: false, href: "/admin/transaction", imgSrc: "/transaction.png" },
-  { label: "Reports",     active: false, href: "/admin/reports",     imgSrc: "/reports.png" },
-  { label: "Users",       active: false, href: "/admin/users",       imgSrc: "/users.png" },
-  { label: "Settings",    active: false, href: "/admin/settings",    imgSrc: "/settings.png" },
-];
-
-function Sidebar({ onLogout }: { onLogout: () => void }) {
-  return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-[#4A81D4] flex flex-col z-50">
-      <div className="flex items-center gap-3 px-6 py-6">
-        <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-          <img src="/logo.png" alt="Logo Jujurly" width={15} height={20} className="object-contain" />
-        </div>
-        <div>
-          <p className="text-white font-bold text-base leading-tight">JUJURLY</p>
-          <p className="text-white/60 text-xs">Canteen System</p>
-        </div>
-      </div>
-      <nav className="flex-1 px-4 space-y-1">
-        {navItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-              item.active ? "bg-blue-100 text-[#4A81D4]" : "text-white hover:bg-white/10"
-            }`}
-          >
-            {item.imgSrc ? (
-              <img
-                src={item.imgSrc}
-                alt={item.label}
-                className="w-5 h-5 object-contain flex-shrink-0 transition-all duration-200 opacity-100"
-                style={item.active ? { filter: "invert(36%) sepia(84%) saturate(1900%) hue-rotate(215deg) brightness(95%) contrast(93%)" } : {}}
-              />
-            ) : (
-              <HiHome className={`text-lg flex-shrink-0 ${item.active ? "text-[#4A81D4]" : "text-white"}`} />
-            )}
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="px-4 pb-6 mt-auto border-t border-blue-400/30 pt-4">
-        <button
-          onClick={onLogout}
-          className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl transition-all duration-200 text-red-100 hover:bg-red-500 hover:text-white font-medium text-sm"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-          </svg>
-          Logout
-        </button>
-      </div>
-    </aside>
-  );
-}
+type StockFieldErrors = {
+  nama_barang?: string;
+  kategori?: string;
+  harga?: string;
+  stok_tersedia?: string;
+};
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -98,147 +50,176 @@ interface FormState {
   stok_tersedia: string;
 }
 
-const emptyForm: FormState = {
-  nama_barang: "",
-  kategori: "Makanan",
-  harga: "",
-  stok_tersedia: "",
-};
+const emptyForm: FormState = { nama_barang: "", kategori: "Makanan", harga: "", stok_tersedia: "" };
 
-// ─── Modal ─────────────────────────────────────────────────────────────────
+interface ToastState { message: string; type: "success" | "error"; }
 
-interface ModalProps {
-  onClose: () => void;
-  onSaved: () => void;
-}
+// ─── Toast ─────────────────────────────────────────────────────────────────
 
-function TambahBarangModal({ onClose, onSaved }: ModalProps) {
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [saving, setSaving] = useState(false);
-
-  const handleSimpan = async () => {
-    if (!form.nama_barang.trim() || !form.harga || !form.stok_tersedia) {
-      alert("Mohon lengkapi semua field sebelum menyimpan.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await supabase.from("stok_barang").insert([
-        {
-          nama_barang: form.nama_barang.trim(),
-          kategori: form.kategori,
-          harga: Number(form.harga),
-          stok_tersedia: Number(form.stok_tersedia),
-        },
-      ]);
-
-      if (error) throw error;
-
-      onSaved();
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
-      alert(`Gagal menyimpan barang: ${msg}`);
-    } finally {
-      setSaving(false);
-    }
-  };
+function Toast({ message, type, onDone }: ToastState & { onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-white border shadow-lg rounded-xl px-4 py-3"
+      style={{ borderColor: type === "success" ? "#bbf7d0" : "#fecaca" }}
     >
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
+      {type === "success"
+        ? <HiCheckCircle className="text-emerald-500 text-xl flex-shrink-0" />
+        : <HiExclamationCircle className="text-red-500 text-xl flex-shrink-0" />
+      }
+      <p className="text-sm font-medium text-slate-700">{message}</p>
+    </div>
+  );
+}
+
+// ─── Shared Form Fields ────────────────────────────────────────────────────
+
+function StockFormFields({ form, fieldErrors, onChange }: {
+  form: FormState;
+  fieldErrors: StockFieldErrors;
+  onChange: (updated: FormState) => void;
+}) {
+  const inputCls = (err?: string) =>
+    `w-full border rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition bg-white ${
+      err ? "border-red-400 focus:ring-red-300" : "border-slate-200 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4]"
+    }`;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nama Barang</label>
+        <input type="text" placeholder="Contoh: Pucuk Harum" value={form.nama_barang}
+          onChange={(e) => onChange({ ...form, nama_barang: e.target.value })}
+          className={inputCls(fieldErrors.nama_barang)} />
+        {fieldErrors.nama_barang && <p className="mt-1 text-xs text-red-500">{fieldErrors.nama_barang}</p>}
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Kategori</label>
+        <select value={form.kategori}
+          onChange={(e) => onChange({ ...form, kategori: e.target.value as Kategori })}
+          className={inputCls(fieldErrors.kategori)}>
+          <option value="Makanan">Makanan</option>
+          <option value="Minuman">Minuman</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Harga Satuan (Rp)</label>
+        <input type="number" placeholder="Contoh: 5000" value={form.harga}
+          onChange={(e) => onChange({ ...form, harga: e.target.value })}
+          className={inputCls(fieldErrors.harga)} />
+        {fieldErrors.harga && <p className="mt-1 text-xs text-red-500">{fieldErrors.harga}</p>}
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Jumlah Stok</label>
+        <input type="number" placeholder="Contoh: 20" value={form.stok_tersedia}
+          onChange={(e) => onChange({ ...form, stok_tersedia: e.target.value })}
+          className={inputCls(fieldErrors.stok_tersedia)} />
+        {fieldErrors.stok_tersedia && <p className="mt-1 text-xs text-red-500">{fieldErrors.stok_tersedia}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal Helper ──────────────────────────────────────────────────────────
+
+function parseAndValidate(form: FormState) {
+  return stockSchema.safeParse({
+    nama_barang: form.nama_barang,
+    kategori: form.kategori,
+    harga: form.harga === "" ? undefined : Number(form.harga),
+    stok_tersedia: form.stok_tersedia === "" ? undefined : Number(form.stok_tersedia),
+  });
+}
+
+// ─── Tambah Barang Modal ───────────────────────────────────────────────────
+
+function TambahBarangModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<StockFieldErrors>({});
+  const [globalError, setGlobalError] = useState("");
+
+  const handleSimpan = async () => {
+    setFieldErrors({}); setGlobalError("");
+    const result = parseAndValidate(form);
+    if (!result.success) {
+      const e = result.error.flatten().fieldErrors;
+      setFieldErrors({ nama_barang: e.nama_barang?.[0], kategori: e.kategori?.[0], harga: e.harga?.[0], stok_tersedia: e.stok_tersedia?.[0] });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("stok_barang").insert([result.data]);
+      if (error) throw error;
+      onSaved(); onClose();
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Gagal menyimpan.");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <p className="text-slate-800 font-bold text-lg">Tambah Barang Baru</p>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-          >
-            <HiXMark className="text-lg" />
-          </button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"><HiXMark className="text-lg" /></button>
         </div>
-
-        {/* Form */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Nama Barang
-            </label>
-            <input
-              type="text"
-              placeholder="Contoh: Pucuk Harum"
-              value={form.nama_barang}
-              onChange={(e) => setForm({ ...form, nama_barang: e.target.value })}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Kategori
-            </label>
-            <select
-              value={form.kategori}
-              onChange={(e) =>
-                setForm({ ...form, kategori: e.target.value as Kategori })
-              }
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition bg-white"
-            >
-              <option value="Makanan">Makanan</option>
-              <option value="Minuman">Minuman</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Harga Satuan (Rp)
-            </label>
-            <input
-              type="number"
-              placeholder="Contoh: 5000"
-              value={form.harga}
-              onChange={(e) => setForm({ ...form, harga: e.target.value })}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-              Jumlah Stok Awal
-            </label>
-            <input
-              type="number"
-              placeholder="Contoh: 20"
-              value={form.stok_tersedia}
-              onChange={(e) => setForm({ ...form, stok_tersedia: e.target.value })}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
-            />
-          </div>
-        </div>
-
-        {/* Actions */}
+        {globalError && <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-medium">{globalError}</div>}
+        <StockFormFields form={form} fieldErrors={fieldErrors} onChange={setForm} />
         <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50"
-          >
-            Batal
-          </button>
-          <button
-            onClick={handleSimpan}
-            disabled={saving}
-            className="flex-1 py-2.5 rounded-lg bg-[#4A81D4] text-white text-sm font-semibold hover:bg-[#3a6fc0] transition-colors disabled:opacity-60"
-          >
-            {saving ? "Menyimpan..." : "Simpan"}
-          </button>
+          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50">Batal</button>
+          <button onClick={handleSimpan} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#4A81D4] text-white text-sm font-semibold hover:bg-[#3a6fc0] transition-colors disabled:opacity-60">{saving ? "Menyimpan..." : "Simpan"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Barang Modal ─────────────────────────────────────────────────────
+
+function EditBarangModal({ item, onClose, onSaved }: { item: StockItem; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<FormState>({
+    nama_barang: item.nama_barang, kategori: item.kategori,
+    harga: String(item.harga), stok_tersedia: String(item.stok_tersedia),
+  });
+  const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<StockFieldErrors>({});
+  const [globalError, setGlobalError] = useState("");
+
+  const handleSimpan = async () => {
+    setFieldErrors({}); setGlobalError("");
+    const result = parseAndValidate(form);
+    if (!result.success) {
+      const e = result.error.flatten().fieldErrors;
+      setFieldErrors({ nama_barang: e.nama_barang?.[0], kategori: e.kategori?.[0], harga: e.harga?.[0], stok_tersedia: e.stok_tersedia?.[0] });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("stok_barang").update(result.data).eq("id_barang", item.id_barang);
+      if (error) throw error;
+      onSaved(); onClose();
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "Gagal menyimpan.");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-slate-800 font-bold text-lg">Edit Barang</p>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"><HiXMark className="text-lg" /></button>
+        </div>
+        {globalError && <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-medium">{globalError}</div>}
+        <StockFormFields form={form} fieldErrors={fieldErrors} onChange={setForm} />
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50">Batal</button>
+          <button onClick={handleSimpan} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#4A81D4] text-white text-sm font-semibold hover:bg-[#3a6fc0] transition-colors disabled:opacity-60">{saving ? "Menyimpan..." : "Simpan Perubahan"}</button>
         </div>
       </div>
     </div>
@@ -248,219 +229,126 @@ function TambahBarangModal({ onClose, onSaved }: ModalProps) {
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function StockPage() {
-  const router = useRouter();
-
-  const handleLogout = () => {
-    if (window.confirm("Apakah Anda yakin ingin keluar?")) {
-      localStorage.removeItem("admin_session");
-      router.push("/admin/login");
-    }
-  };
   const [items, setItems] = useState<StockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [adminName, setAdminName] = useState("Admin");
-
-  useEffect(() => {
-    const session = localStorage.getItem("admin_session");
-    if (session) setAdminName(session);
-  }, []);
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const [showTambah, setShowTambah] = useState(false);
+  const [editItem, setEditItem] = useState<StockItem | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
-  // ── READ ──
+  const showToast = (message: string, type: "success" | "error") => setToast({ message, type });
+
   const fetchItems = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("stok_barang")
-        .select("*")
-        .order("waktu_ditambahkan", { ascending: false });
-
+      const { data, error } = await supabase.from("stok_barang").select("*").order("waktu_ditambahkan", { ascending: false });
       if (error) throw error;
       setItems((data as StockItem[]) ?? []);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal memuat data.";
-      alert(`Error: ${msg}`);
-    } finally {
-      setIsLoading(false);
-    }
+      showToast(err instanceof Error ? err.message : "Gagal memuat data stok.", "error");
+    } finally { setIsLoading(false); }
   }, []);
 
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+  useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  // ── DELETE ──
   const handleDelete = async (id: number, nama: string) => {
-    const ok = window.confirm(`Apakah Anda yakin ingin menghapus "${nama}"?`);
-    if (!ok) return;
-
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus "${nama}"?`)) return;
     try {
-      const { error } = await supabase
-        .from("stok_barang")
-        .delete()
-        .eq("id_barang", id);
-
+      const { error } = await supabase.from("stok_barang").delete().eq("id_barang", id);
       if (error) throw error;
+      showToast(`"${nama}" berhasil dihapus.`, "success");
       await fetchItems();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal menghapus.";
-      alert(`Gagal menghapus barang: ${msg}`);
+      showToast(err instanceof Error ? err.message : "Gagal menghapus barang.", "error");
     }
   };
 
-  const filtered = items.filter((item) =>
-    item.nama_barang.toLowerCase().includes(search.toLowerCase())
-  );
-
+  const filtered = items.filter((item) => item.nama_barang.toLowerCase().includes(search.toLowerCase()));
   const fmt = (n: number) => "Rp " + n.toLocaleString("id-ID");
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
-      <Sidebar onLogout={handleLogout} />
+    <div className="p-8 space-y-6">
+      <AdminHeader title="Stock Management" subtitle="Manage your canteen inventory manually" />
 
-      {showModal && (
+      {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
+
+      {showTambah && (
         <TambahBarangModal
-          onClose={() => setShowModal(false)}
-          onSaved={fetchItems}
+          onClose={() => setShowTambah(false)}
+          onSaved={() => { fetchItems(); showToast("Barang berhasil ditambahkan.", "success"); }}
         />
       )}
 
-      {/* Main content */}
-      <div className="ml-64 flex-1 overflow-y-auto">
-        <div className="p-8 space-y-6">
+      {editItem && (
+        <EditBarangModal
+          item={editItem}
+          onClose={() => setEditItem(null)}
+          onSaved={() => { fetchItems(); showToast("Barang berhasil diperbarui.", "success"); }}
+        />
+      )}
 
-          {/* Top Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">Stock Management</h1>
-              <p className="text-slate-500 text-sm mt-0.5">
-                Manage your canteen inventory manually
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <NotifBell />
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                  <HiUser className="text-slate-500 text-lg" />
-                </div>
-                <div className="text-sm leading-tight">
-                  <p className="font-semibold text-slate-800">{adminName}</p>
-                  <p className="text-slate-500 text-xs">Staff KWU</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Blue divider */}
-          <div className="h-[3px] bg-[#487ADB] w-full shadow-sm rounded-none" />
-
-          {/* Action Bar */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative w-72">
-              <HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-              <input
-                type="text"
-                placeholder="Cari barang..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
-              />
-            </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 bg-[#4A81D4] hover:bg-[#3a6fc0] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
-            >
-              <HiPlus className="text-base" />
-              Tambah Barang Baru
-            </button>
-          </div>
-
-          {/* Table Card */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Nama Barang", "Kategori", "Harga", "Sisa Stok", "Status", "Aksi"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-5 py-3 text-slate-500 font-semibold text-xs uppercase tracking-wide"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-slate-400 text-sm">
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-slate-400 text-sm">
-                      {search ? "Tidak ada barang ditemukan." : "Belum ada data stok."}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((item, i) => (
-                    <tr
-                      key={item.id_barang}
-                      className={`border-b border-slate-50 ${
-                        i % 2 === 0 ? "bg-white" : "bg-slate-50/40"
-                      }`}
-                    >
-                      <td className="px-5 py-3.5 text-slate-800 font-medium">
-                        {item.nama_barang}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                            item.kategori === "Makanan"
-                              ? "bg-orange-50 text-orange-600"
-                              : "bg-sky-50 text-sky-600"
-                          }`}
-                        >
-                          {item.kategori}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-700">{fmt(item.harga)}</td>
-                      <td className="px-5 py-3.5 text-slate-700 font-mono">
-                        {item.stok_tersedia}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {item.stok_tersedia > 0 ? (
-                          <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                            Tersedia
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">
-                            Habis
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <button className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-[#4A81D4] transition-colors">
-                            <HiPencil className="text-base" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id_barang, item.nama_barang)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                          >
-                            <HiTrash className="text-base" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
+      {/* Action Bar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative w-72">
+          <HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+          <input type="text" placeholder="Cari barang..." value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
+          />
         </div>
+        <button onClick={() => setShowTambah(true)}
+          className="inline-flex items-center gap-2 bg-[#4A81D4] hover:bg-[#3a6fc0] text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors">
+          <HiPlus className="text-base" /> Tambah Barang Baru
+        </button>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100">
+              {["Nama Barang", "Kategori", "Harga", "Sisa Stok", "Status", "Aksi"].map((h) => (
+                <th key={h} className="text-left px-5 py-3 text-slate-500 font-semibold text-xs uppercase tracking-wide">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr><td colSpan={6} className="px-5 py-10 text-center text-slate-400 text-sm">Memuat data...</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={6} className="px-5 py-10 text-center text-slate-400 text-sm">{search ? "Tidak ada barang ditemukan." : "Belum ada data stok."}</td></tr>
+            ) : filtered.map((item, i) => (
+              <tr key={item.id_barang} className={`border-b border-slate-50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
+                <td className="px-5 py-3.5 text-slate-800 font-medium">{item.nama_barang}</td>
+                <td className="px-5 py-3.5">
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${item.kategori === "Makanan" ? "bg-orange-50 text-orange-600" : "bg-sky-50 text-sky-600"}`}>
+                    {item.kategori}
+                  </span>
+                </td>
+                <td className="px-5 py-3.5 text-slate-700">{fmt(item.harga)}</td>
+                <td className="px-5 py-3.5 text-slate-700 font-mono">{item.stok_tersedia}</td>
+                <td className="px-5 py-3.5">
+                  {item.stok_tersedia > 0
+                    ? <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">Tersedia</span>
+                    : <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">Habis</span>
+                  }
+                </td>
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setEditItem(item)} title="Edit barang"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-[#4A81D4] transition-colors">
+                      <HiPencil className="text-base" />
+                    </button>
+                    <button onClick={() => handleDelete(item.id_barang, item.nama_barang)} title="Hapus barang"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                      <HiTrash className="text-base" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

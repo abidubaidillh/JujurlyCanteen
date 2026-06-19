@@ -3,11 +3,10 @@
 import { memo } from "react";
 
 /**
- * MascotLogin — Reusable SVG robot component (AI Admin Assistant version).
- * Dikustomisasi khusus untuk halaman admin login Jujurly (Mascot_Login.tsx).
- * Posisi fixed ditangani oleh wrapper di masing-masing halaman.
+ * MascotScan — reusable SVG robot component khusus untuk halaman scan.
+ * Menampilkan status scanning pada layar wajah.
  */
-const MascotLogin = memo(function MascotLogin() {
+const MascotScan = memo(function MascotScan() {
   return (
     <div className="select-none inline-flex flex-col items-center">
       <svg
@@ -74,15 +73,15 @@ const MascotLogin = memo(function MascotLogin() {
           <rect x="322" y="210" width="30" height="50" rx="20" fill="#93c5fd" stroke="#bfdbfe" strokeWidth="1" />
           <rect x="527" y="210" width="30" height="50" rx="20" fill="#93c5fd" stroke="#bfdbfe" strokeWidth="1" />
 
-          {/* Face screen — menampilkan pesan login */}
+          {/* Face screen — khusus scan */}
           <rect x="372" y="188" width="136" height="88" rx="24" fill="#0f172a" />
           <rect x="372" y="188" width="136" height="88" rx="24" fill="none" stroke="#1e40af" strokeWidth="1.5" />
           <text x="390" y="225" fontFamily="monospace" fontSize="14" fill="#4ade80" fontWeight="bold">
-            {`> Login`}
+            {`> Scan`}
           </text>
           <rect x="390" y="235" width="8" height="14" rx="1" fill="#4ade80" className="cursor" />
           <text x="390" y="262" fontFamily="monospace" fontSize="10" fill="#22d3ee" opacity="0.8">
-            waiting...
+            ready_to_scan...
           </text>
 
           {/* Antenna kiri */}
@@ -100,4 +99,4 @@ const MascotLogin = memo(function MascotLogin() {
   );
 });
 
-export default MascotLogin;
+export default MascotScan;

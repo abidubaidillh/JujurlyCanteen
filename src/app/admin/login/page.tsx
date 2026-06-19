@@ -1,10 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { supabase } from "../../scan/supabase-logic";
 import { HiUser, HiLockClosed, HiEye, HiEyeSlash } from "react-icons/hi2";
 import Mascot_Login from "../../../components/ui/Mascot_Login";
+
+// ─── Zod Schema ────────────────────────────────────────────────────────────
+const loginSchema = z.object({
+  username: z
+    .string()
+    .min(3, "Username minimal 3 karakter")
+    .max(50, "Username terlalu panjang")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username hanya boleh huruf, angka, dan underscore")
+    .trim(),
+  password: z
+    .string()
+    .min(6, "Password minimal 6 karakter")
+    .max(100, "Password terlalu panjang"),
+});
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -14,17 +30,31 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setFieldErrors({});
+
+    // ── Validasi Zod ──
+    const result = loginSchema.safeParse({ username, password });
+    if (!result.success) {
+      const errs = result.error.flatten().fieldErrors;
+      setFieldErrors({
+        username: errs.username?.[0],
+        password: errs.password?.[0],
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("admin")
         .select("*")
-        .eq("username", username)
-        .eq("password", password)
+        .eq("username", result.data.username)
+        .eq("password", result.data.password)
         .single();
 
       if (error || !data) {
@@ -32,7 +62,7 @@ export default function AdminLoginPage() {
         return;
       }
 
-      localStorage.setItem("admin_session", username);
+      localStorage.setItem("admin_session", result.data.username);
       router.push("/admin/dashboard");
     } catch (err: unknown) {
       setErrorMsg(
@@ -149,11 +179,14 @@ export default function AdminLoginPage() {
                 type="text"
                 placeholder="Username"
                 value={username}
-                onChange={(e) => { setUsername(e.target.value); setErrorMsg(""); }}
+                onChange={(e) => { setUsername(e.target.value); setFieldErrors((p) => ({ ...p, username: undefined })); setErrorMsg(""); }}
                 required
                 autoComplete="username"
-                className={inputCls}
+                className={`${inputCls} ${fieldErrors.username ? "border-red-400 focus:ring-red-300" : ""}`}
               />
+              {fieldErrors.username && (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.username}</p>
+              )}
             </div>
 
             {/* Password */}
@@ -163,10 +196,10 @@ export default function AdminLoginPage() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={password}
-                onChange={(e) => { setPassword(e.target.value); setErrorMsg(""); }}
+                onChange={(e) => { setPassword(e.target.value); setFieldErrors((p) => ({ ...p, password: undefined })); setErrorMsg(""); }}
                 required
                 autoComplete="current-password"
-                className={`${inputCls} pr-11`}
+                className={`${inputCls} pr-11 ${fieldErrors.password ? "border-red-400 focus:ring-red-300" : ""}`}
               />
               <button
                 type="button"
@@ -181,13 +214,9 @@ export default function AdminLoginPage() {
                   <HiEye className="text-base" />
                 )}
               </button>
-            </div>
-
-            {/* Forgot Password */}
-            <div className="mt-2 mb-4">
-              <span className="text-sm font-semibold text-gray-500 hover:text-[#2B4C7E] transition-colors cursor-pointer">
-                Forgot Password?
-              </span>
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>
+              )}
             </div>
 
             {/* Submit */}
@@ -198,6 +227,16 @@ export default function AdminLoginPage() {
             >
               {isLoading ? "Memproses..." : "LOGIN"}
             </button>
+
+            {/* Kembali ke Halaman Utama */}
+            <div className="mt-2 text-center">
+              <Link
+                href="/"
+                className="text-sm text-gray-400 hover:text-[#2B4C7E] transition-colors duration-200"
+              >
+                ← Kembali
+              </Link>
+            </div>
 
           </form>
         </div>
