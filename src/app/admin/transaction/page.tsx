@@ -36,12 +36,12 @@ const fmtDate = (s: string) =>
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    Valid: "bg-emerald-100 text-emerald-700",
-    Pending: "bg-yellow-100 text-yellow-700",
-    Invalid: "bg-red-100 text-red-700",
+    Valid:   "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    Invalid: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   };
   return (
-    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${map[status] ?? "bg-slate-100 text-slate-500"}`}>
+    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${map[status] ?? "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"}`}>
       {status}
     </span>
   );
@@ -71,10 +71,10 @@ function DetailModal({ tx, onClose }: { tx: Transaksi; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <p className="font-bold text-slate-800">Detail Transaksi</p>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <p className="font-bold text-slate-800 dark:text-slate-100">Detail Transaksi</p>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
             <HiXMark className="text-lg" />
           </button>
         </div>
@@ -86,25 +86,25 @@ function DetailModal({ tx, onClose }: { tx: Transaksi; onClose: () => void }) {
             { label: "Metode", value: tx.metode_pembayaran },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between text-sm">
-              <span className="text-slate-500">{label}</span>
-              <span className="text-slate-800 font-medium">{value}</span>
+              <span className="text-slate-500 dark:text-slate-400">{label}</span>
+              <span className="text-slate-800 dark:text-slate-100 font-medium">{value}</span>
             </div>
           ))}
           <div className="flex justify-between text-sm items-center">
-            <span className="text-slate-500">Status</span>
+            <span className="text-slate-500 dark:text-slate-400">Status</span>
             <StatusBadge status={tx.status_validasi} />
           </div>
         </div>
         <div className="px-6 pb-6">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Bukti Pembayaran</p>
-          <div className="rounded-xl border border-slate-100 bg-slate-50 overflow-hidden min-h-[160px] flex items-center justify-center">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Bukti Pembayaran</p>
+          <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-hidden min-h-[160px] flex items-center justify-center">
             {loadingImg ? (
               <p className="text-slate-400 text-sm">Memuat gambar...</p>
             ) : imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="Bukti pembayaran" className="w-full max-h-72 object-contain" />
             ) : (
-              <div className="flex flex-col items-center gap-2 py-8 text-slate-400">
+              <div className="flex flex-col items-center gap-2 py-8 text-slate-400 dark:text-slate-500">
                 <HiPhoto className="text-3xl" />
                 <p className="text-sm">Bukti tidak ditemukan</p>
               </div>
@@ -185,11 +185,11 @@ export default function TransactionPage() {
             <HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
             <input type="text" placeholder="Cari ID Transaksi..." value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
+              className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
             />
           </div>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="py-2.5 px-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition">
+            className="py-2.5 px-3 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition">
             <option>Semua Status</option>
             <option>Valid</option>
             <option>Pending</option>
@@ -198,27 +198,27 @@ export default function TransactionPage() {
         </div>
         <div className="flex items-center gap-2">
           <select value={deleteRange} onChange={(e) => setDeleteRange(e.target.value)}
-            className="py-2.5 px-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition">
-            <option value="">Pilih Rentang Waktu...</option>
+            className="py-2.5 px-3 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition">
+            <option value="">Rentang Waktu</option>
             <option value="1m">Lebih dari 1 Bulan Lalu</option>
             <option value="3m">Lebih dari 3 Bulan Lalu</option>
             <option value="6m">Lebih dari 6 Bulan Lalu</option>
             <option value="all">Semua Transaksi</option>
           </select>
           <button onClick={handleDeleteHistory}
-            className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
+            className="px-4 py-2.5 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
             <HiTrash className="text-base" /> Hapus Data
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-100">
+            <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
               {["ID Transaksi", "Waktu", "Nominal", "Metode", "Status", "Aksi"].map((h) => (
-                <th key={h} className="text-left px-5 py-3 text-slate-500 font-semibold text-xs uppercase tracking-wide">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
@@ -228,15 +228,17 @@ export default function TransactionPage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={6} className="px-5 py-10 text-center text-slate-400 text-sm">{items.length === 0 ? "Belum ada data transaksi." : "Tidak ada transaksi yang sesuai filter."}</td></tr>
             ) : filtered.map((tx, i) => (
-              <tr key={tx.id_transaksi} className={`border-b border-slate-50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
-                <td className="px-5 py-3.5 text-slate-700 font-mono text-xs">#{tx.id_transaksi}</td>
-                <td className="px-5 py-3.5 text-slate-500 text-xs whitespace-nowrap">{fmtDate(tx.waktu_transaksi)}</td>
-                <td className="px-5 py-3.5 text-slate-800 font-medium">{fmt(tx.nominal)}</td>
-                <td className="px-5 py-3.5 text-slate-600">{tx.metode_pembayaran}</td>
+              <tr key={tx.id_transaksi} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40 ${
+                i % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/40 dark:bg-slate-700/20"
+              }`}>
+                <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300 font-mono text-xs">#{tx.id_transaksi}</td>
+                <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{fmtDate(tx.waktu_transaksi)}</td>
+                <td className="px-5 py-3.5 text-slate-800 dark:text-slate-100 font-medium">{fmt(tx.nominal)}</td>
+                <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300">{tx.metode_pembayaran}</td>
                 <td className="px-5 py-3.5"><StatusBadge status={tx.status_validasi} /></td>
                 <td className="px-5 py-3.5">
                   <button onClick={() => setSelected(tx)} title="Lihat detail"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-[#4A81D4] transition-colors">
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-[#4A81D4] dark:hover:text-blue-400 transition-colors">
                     <HiEye className="text-base" />
                   </button>
                 </td>
@@ -245,7 +247,7 @@ export default function TransactionPage() {
           </tbody>
         </table>
         {!isLoading && filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-400">
+          <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-500">
             Menampilkan {filtered.length} dari {items.length} transaksi
           </div>
         )}

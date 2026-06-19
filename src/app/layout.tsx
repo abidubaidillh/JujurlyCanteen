@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "./globals.css";
+import ThemeProvider from "../components/ThemeProvider";
 
 export default function RootLayout({
   children,
@@ -7,11 +8,13 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <div className="min-h-screen flex flex-col">
-          {children}
-        </div>
+        <ThemeProvider>
+          <div className="min-h-screen flex flex-col">
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -45,18 +45,18 @@ const fmtTime = (s: string) =>
 function StatusBadge({ status }: { status: string }) {
   if (status === "Valid")
     return (
-      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+      <span className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2.5 py-1 rounded-full">
         <HiCheckCircle className="text-sm" /> Valid
       </span>
     );
   if (status === "Pending")
     return (
-      <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+      <span className="inline-flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-semibold px-2.5 py-1 rounded-full">
         Pending
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">
+    <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-semibold px-2.5 py-1 rounded-full">
       Invalid
     </span>
   );
@@ -74,13 +74,13 @@ function KpiCard({
   value: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-5 flex items-center gap-4">
       <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
         <Icon className="text-white text-xl" />
       </div>
       <div>
-        <p className="text-slate-500 text-sm">{title}</p>
-        <p className="text-slate-800 text-2xl font-bold leading-tight">{value}</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">{title}</p>
+        <p className="text-slate-800 dark:text-white text-2xl font-bold leading-tight">{value}</p>
       </div>
     </div>
   );
@@ -148,7 +148,7 @@ function LineChart({ data }: { data: ChartPoint[] }) {
           </g>
         ))}
         {pts.map((p, i) => (
-          <text key={i} x={p.x} y={totalH + 20} textAnchor="middle" fill="#94a3b8" fontSize="9">
+          <text key={i} x={p.x} y={totalH + 20} textAnchor="middle" className="fill-slate-400 dark:fill-slate-500" fontSize="9">
             {p.label}
           </text>
         ))}
@@ -200,8 +200,8 @@ function DonutChart({ counts }: { counts: { valid: number; pending: number; inva
         {segments.map((s) => (
           <div key={s.label} className="flex items-center gap-2 text-sm">
             <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-            <span className="text-slate-600">{s.label}</span>
-            <span className="text-slate-400 text-xs">{s.pct}%</span>
+            <span className="text-slate-600 dark:text-slate-300">{s.label}</span>
+            <span className="text-slate-400 dark:text-slate-500 text-xs">{s.pct}%</span>
           </div>
         ))}
       </div>
@@ -216,9 +216,9 @@ function TransactionTable({ rows, isLoading }: { rows: TxRow[]; isLoading: boole
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-100">
+          <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
             {["ID Transaksi", "Nominal", "Metode Pembayaran", "Waktu", "Status"].map((h) => (
-              <th key={h} className="text-left px-4 py-3 text-slate-500 font-semibold text-xs uppercase tracking-wide">{h}</th>
+              <th key={h} className="text-left px-4 py-3 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wide">{h}</th>
             ))}
           </tr>
         </thead>
@@ -228,11 +228,13 @@ function TransactionTable({ rows, isLoading }: { rows: TxRow[]; isLoading: boole
           ) : rows.length === 0 ? (
             <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">Belum ada transaksi.</td></tr>
           ) : rows.map((tx, i) => (
-            <tr key={tx.id_transaksi} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-              <td className="px-4 py-3 text-slate-700 font-mono text-xs">#{tx.id_transaksi}</td>
-              <td className="px-4 py-3 text-slate-700">{fmtRp(tx.nominal)}</td>
-              <td className="px-4 py-3 text-slate-700">{tx.metode_pembayaran}</td>
-              <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{fmtTime(tx.waktu_transaksi)}</td>
+            <tr key={tx.id_transaksi} className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40 ${
+              i % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/50 dark:bg-slate-700/20"
+            }`}>
+              <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-xs">#{tx.id_transaksi}</td>
+              <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{fmtRp(tx.nominal)}</td>
+              <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{tx.metode_pembayaran}</td>
+              <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{fmtTime(tx.waktu_transaksi)}</td>
               <td className="px-4 py-3"><StatusBadge status={tx.status_validasi} /></td>
             </tr>
           ))}
@@ -367,10 +369,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* Chart */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-semibold text-slate-800">Sales Overview</p>
-          <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+          <p className="font-semibold text-slate-800 dark:text-slate-100">Sales Overview</p>
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-900 rounded-lg p-1">
             {([
               { key: "weekly",  label: "Mingguan" },
               { key: "monthly", label: "Bulanan" },
@@ -380,7 +382,9 @@ export default function AdminDashboard() {
                 key={key}
                 onClick={() => setChartFilter(key)}
                 className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                  chartFilter === key ? "bg-white text-[#4A81D4] shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  chartFilter === key
+                    ? "bg-white dark:bg-blue-600 text-[#4A81D4] dark:text-white shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 }`}
               >
                 {label}
@@ -397,14 +401,14 @@ export default function AdminDashboard() {
 
       {/* Recent Transaction + Donut */}
       <div className="grid grid-cols-3 gap-5">
-        <div className="col-span-2 bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <p className="font-semibold text-slate-800">Recent Transaction</p>
+        <div className="col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <p className="font-semibold text-slate-800 dark:text-slate-100">Recent Transaction</p>
           </div>
           <TransactionTable rows={data.recentTx} isLoading={isLoading} />
         </div>
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-          <p className="font-semibold text-slate-800 mb-5">Orders Status Overview</p>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+          <p className="font-semibold text-slate-800 dark:text-slate-100 mb-5">Orders Status Overview</p>
           <DonutChart counts={data.statusCounts} />
         </div>
       </div>

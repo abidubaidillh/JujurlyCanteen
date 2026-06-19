@@ -68,35 +68,37 @@ function TambahAdminModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
   };
 
   const inputCls = (err?: string) =>
-    `w-full border rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition bg-white ${
-      err ? "border-red-400 focus:ring-red-300" : "border-slate-200 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4]"
+    `w-full border rounded-lg px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 transition bg-white dark:bg-slate-900 ${
+      err
+        ? "border-red-400 focus:ring-red-300"
+        : "border-slate-200 dark:border-slate-600 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4]"
     }`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <p className="font-bold text-slate-800 text-lg">Tambah Admin Baru</p>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"><HiXMark className="text-lg" /></button>
+          <p className="font-bold text-slate-800 dark:text-slate-100 text-lg">Tambah Admin Baru</p>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"><HiXMark className="text-lg" /></button>
         </div>
-        {globalError && <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-medium">{globalError}</div>}
+        {globalError && <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-400 text-xs font-medium">{globalError}</div>}
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Username</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Username</label>
             <input type="text" placeholder="Masukkan username" value={username}
               onChange={(e) => { setUsername(e.target.value); clearFieldError("username"); }}
               className={inputCls(fieldErrors.username)} />
             {fieldErrors.username && <p className="mt-1 text-xs text-red-500">{fieldErrors.username}</p>}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Password</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Password</label>
             <input type="password" placeholder="••••••••" value={password}
               onChange={(e) => { setPassword(e.target.value); clearFieldError("password"); }}
               className={inputCls(fieldErrors.password)} />
             {fieldErrors.password && <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Konfirmasi Password</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Konfirmasi Password</label>
             <input type="password" placeholder="••••••••" value={confirmPassword}
               onChange={(e) => { setConfirmPassword(e.target.value); clearFieldError("confirmPassword"); }}
               className={inputCls(fieldErrors.confirmPassword)} />
@@ -104,7 +106,7 @@ function TambahAdminModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
           </div>
         </div>
         <div className="flex gap-3 mt-6">
-          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50">Batal</button>
+          <button onClick={onClose} disabled={saving} className="flex-1 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50">Batal</button>
           <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#4A81D4] hover:bg-[#3a6fc0] text-white text-sm font-semibold transition-colors disabled:opacity-60">{saving ? "Menyimpan..." : "Simpan"}</button>
         </div>
       </div>
@@ -161,7 +163,7 @@ export default function UsersPage() {
           <HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
           <input type="text" placeholder="Cari admin..." value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition"
           />
         </div>
         <button onClick={() => setShowModal(true)}
@@ -171,12 +173,12 @@ export default function UsersPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-100">
+            <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
               {["ID Admin", "Username", "Aksi"].map((h) => (
-                <th key={h} className="text-left px-5 py-3 text-slate-500 font-semibold text-xs uppercase tracking-wide">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
@@ -186,12 +188,16 @@ export default function UsersPage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={3} className="px-5 py-10 text-center text-slate-400 text-sm">{search ? "Admin tidak ditemukan." : "Belum ada data admin."}</td></tr>
             ) : filtered.map((admin, i) => (
-              <tr key={admin.id_admin} className={`border-b border-slate-50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
-                <td className="px-5 py-3.5 text-slate-500 font-mono text-xs">#{admin.id_admin}</td>
-                <td className="px-5 py-3.5 text-slate-800 font-medium">{admin.username}</td>
+              <tr key={admin.id_admin} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors ${
+                i % 2 === 0
+                  ? "bg-white dark:bg-slate-800"
+                  : "bg-slate-50/40 dark:bg-slate-700/20"
+              } hover:bg-slate-50 dark:hover:bg-slate-700/40`}>
+                <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono text-xs">#{admin.id_admin}</td>
+                <td className="px-5 py-3.5 text-slate-800 dark:text-slate-200 font-medium">{admin.username}</td>
                 <td className="px-5 py-3.5">
                   <button onClick={() => handleDelete(admin.id_admin, admin.username)} title="Hapus admin"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 dark:hover:text-red-400 transition-colors">
                     <HiTrash className="text-base" />
                   </button>
                 </td>
@@ -200,7 +206,7 @@ export default function UsersPage() {
           </tbody>
         </table>
         {!isLoading && filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-400">{filtered.length} admin terdaftar</div>
+          <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-500">{filtered.length} admin terdaftar</div>
         )}
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import {
   HiComputerDesktop,
   HiMoon,
@@ -101,8 +102,10 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  // Appearance
-  const [theme, setTheme] = useState<Theme>("system");
+  // Appearance — real theme via next-themes
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Sessions
   const [sessions, setSessions] = useState<SessionDevice[]>(dummySessions);
@@ -138,38 +141,42 @@ export default function SettingsPage() {
 
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
 
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm divide-y divide-slate-100">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700">
 
         {/* ── Section 1: Appearance ─────────────────────────────────────── */}
         <div className="p-6">
           <div className="flex items-center gap-2.5 mb-1">
             <HiSun className="text-[#4A81D4] text-lg" />
-            <p className="font-bold text-slate-800">Appearance</p>
+            <p className="font-bold text-slate-800 dark:text-slate-100">Appearance</p>
           </div>
-          <p className="text-xs text-slate-400 mb-5 ml-7">Pilih tema tampilan panel admin</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-5 ml-7">Pilih tema tampilan panel admin</p>
 
           <div className="grid grid-cols-3 gap-3">
-            {themeOptions.map(({ value, label, icon: Icon, desc }) => (
+            {!mounted ? (
+              <div className="col-span-3 h-[108px] rounded-xl bg-slate-100 dark:bg-slate-700 animate-pulse" />
+            ) : (
+              themeOptions.map(({ value, label, icon: Icon, desc }) => (
               <button
                 key={value}
                 onClick={() => setTheme(value)}
                 className={`flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-left transition-all ${
                   theme === value
-                    ? "border-[#4A81D4] bg-blue-50"
-                    : "border-slate-200 hover:border-slate-300 bg-white"
+                    ? "border-[#4A81D4] bg-blue-50 dark:bg-blue-950/40"
+                    : "border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 bg-white dark:bg-slate-700/50"
                 }`}
               >
                 <Icon
-                  className={`text-xl ${theme === value ? "text-[#4A81D4]" : "text-slate-400"}`}
+                  className={`text-xl ${theme === value ? "text-[#4A81D4]" : "text-slate-400 dark:text-slate-500"}`}
                 />
                 <div>
-                  <p className={`text-sm font-semibold ${theme === value ? "text-[#4A81D4]" : "text-slate-700"}`}>
+                  <p className={`text-sm font-semibold ${theme === value ? "text-[#4A81D4]" : "text-slate-700 dark:text-slate-300"}`}>
                     {label}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{desc}</p>
                 </div>
               </button>
-            ))}
+            ))
+            )}
           </div>
         </div>
 
@@ -177,9 +184,9 @@ export default function SettingsPage() {
         <div className="p-6">
           <div className="flex items-center gap-2.5 mb-1">
             <HiGlobeAlt className="text-[#4A81D4] text-lg" />
-            <p className="font-bold text-slate-800">Security &amp; Sessions</p>
+            <p className="font-bold text-slate-800 dark:text-slate-100">Security &amp; Sessions</p>
           </div>
-          <p className="text-xs text-slate-400 mb-5 ml-7">
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-5 ml-7">
             Perangkat yang saat ini memiliki akses ke panel admin
           </p>
 
@@ -191,36 +198,38 @@ export default function SettingsPage() {
                 <div
                   key={s.id}
                   className={`flex items-center justify-between p-4 rounded-xl border ${
-                    s.isCurrent ? "border-[#4A81D4]/30 bg-blue-50/50" : "border-slate-100 bg-slate-50/50"
+                    s.isCurrent
+                      ? "border-[#4A81D4]/30 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-700/30"
+                      : "border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/30"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      s.isCurrent ? "bg-[#4A81D4]/10" : "bg-slate-100"
+                      s.isCurrent ? "bg-[#4A81D4]/10 dark:bg-blue-900/30" : "bg-slate-100 dark:bg-slate-700"
                     }`}>
                       {s.os.includes("iPhone") || s.os.includes("Android") ? (
-                        <HiDevicePhoneMobile className={`text-lg ${s.isCurrent ? "text-[#4A81D4]" : "text-slate-400"}`} />
+                        <HiDevicePhoneMobile className={`text-lg ${s.isCurrent ? "text-[#4A81D4]" : "text-slate-400 dark:text-slate-500"}`} />
                       ) : (
-                        <HiComputerDesktop className={`text-lg ${s.isCurrent ? "text-[#4A81D4]" : "text-slate-400"}`} />
+                        <HiComputerDesktop className={`text-lg ${s.isCurrent ? "text-[#4A81D4]" : "text-slate-400 dark:text-slate-500"}`} />
                       )}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-800">{s.browser} · {s.os}</p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{s.browser} · {s.os}</p>
                         {s.isCurrent && (
                           <span className="text-xs font-medium bg-[#4A81D4] text-white px-2 py-0.5 rounded-full">
                             Saat ini
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">{s.location} · {s.lastActive}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{s.location} · {s.lastActive}</p>
                     </div>
                   </div>
 
                   {!s.isCurrent && (
                     <button
                       onClick={() => handleLogoutDevice(s.id)}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-white hover:bg-red-500 border border-red-200 hover:border-transparent px-3 py-1.5 rounded-lg transition-all"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-white hover:bg-red-500 border border-red-200 dark:border-red-500/40 hover:border-transparent px-3 py-1.5 rounded-lg transition-all dark:text-red-400 dark:hover:bg-red-600"
                     >
                       <HiArrowRightOnRectangle className="text-sm" />
                       Logout
@@ -236,23 +245,23 @@ export default function SettingsPage() {
         <div className="p-6">
           <div className="flex items-center gap-2.5 mb-1">
             <HiWrenchScrewdriver className="text-[#4A81D4] text-lg" />
-            <p className="font-bold text-slate-800">Data Management</p>
+            <p className="font-bold text-slate-800 dark:text-slate-100">Data Management</p>
           </div>
-          <p className="text-xs text-slate-400 mb-5 ml-7">Konfigurasi pemeliharaan dan performa sistem</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-5 ml-7">Konfigurasi pemeliharaan dan performa sistem</p>
 
           <div className="space-y-4">
             {/* Maintenance Mode */}
-            <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/30">
               <div>
-                <p className="text-sm font-semibold text-slate-800">Maintenance Mode</p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Maintenance Mode</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {maintenanceMode
                     ? "Sistem sedang dalam pemeliharaan — akses pengguna dibatasi"
                     : "Sistem berjalan normal"}
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                <span className={`text-xs font-semibold ${maintenanceMode ? "text-amber-500" : "text-slate-400"}`}>
+                <span className={`text-xs font-semibold ${maintenanceMode ? "text-amber-500" : "text-slate-400 dark:text-slate-500"}`}>
                   {maintenanceMode ? "Aktif" : "Nonaktif"}
                 </span>
                 <Toggle checked={maintenanceMode} onChange={setMaintenanceMode} />
@@ -260,17 +269,17 @@ export default function SettingsPage() {
             </div>
 
             {/* Hapus Cache */}
-            <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/30">
               <div>
-                <p className="text-sm font-semibold text-slate-800">Hapus Cache Sistem</p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Hapus Cache Sistem</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   Bersihkan data cache untuk memastikan performa optimal
                 </p>
               </div>
               <button
                 onClick={handleClearCache}
                 disabled={cacheCleared}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-4"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-4"
               >
                 <HiTrash className="text-base" />
                 {cacheCleared ? "Cache Dihapus" : "Hapus Cache"}

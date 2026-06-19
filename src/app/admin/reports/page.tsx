@@ -49,10 +49,10 @@ function exportCsv(rows: ReportRow[]) {
 
 function SummaryCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{label}</p>
-      <p className="text-2xl font-bold text-slate-800 leading-tight">{value}</p>
-      {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-5">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">{label}</p>
+      <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-tight">{value}</p>
+      {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -97,19 +97,19 @@ export default function ReportsPage() {
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Dari</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">Dari</label>
           <input type="date" value={startDate} max={endDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition" />
+            className="border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition" />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Sampai</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">Sampai</label>
           <input type="date" value={endDate} min={startDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition" />
+            className="border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/30 focus:border-[#4A81D4] transition" />
         </div>
         <button onClick={() => fetchReport(startDate, endDate)}
-          className="px-4 py-2 rounded-lg border border-[#4A81D4] text-[#4A81D4] text-sm font-semibold hover:bg-blue-50 transition-colors">
+          className="px-4 py-2 rounded-lg border border-[#4A81D4] text-[#4A81D4] text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">
           Terapkan Filter
         </button>
         <button onClick={() => exportCsv(rows)} disabled={rows.length === 0}
@@ -126,12 +126,12 @@ export default function ReportsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-100">
+            <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
               {["Waktu", "ID Transaksi", "Metode Pembayaran", "Nominal"].map((h) => (
-                <th key={h} className="text-left px-5 py-3 text-slate-500 font-semibold text-xs uppercase tracking-wide">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
@@ -141,17 +141,19 @@ export default function ReportsPage() {
             ) : rows.length === 0 ? (
               <tr><td colSpan={4} className="px-5 py-10 text-center text-slate-400 text-sm">Tidak ada transaksi valid pada rentang tanggal ini.</td></tr>
             ) : rows.map((row, i) => (
-              <tr key={row.id_transaksi} className={`border-b border-slate-50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
-                <td className="px-5 py-3.5 text-slate-500 text-xs whitespace-nowrap">{fmtDate(row.waktu_transaksi)}</td>
-                <td className="px-5 py-3.5 text-slate-700 font-mono text-xs">#{row.id_transaksi}</td>
-                <td className="px-5 py-3.5 text-slate-600">{row.metode_pembayaran}</td>
-                <td className="px-5 py-3.5 text-slate-800 font-semibold">{fmt(row.nominal)}</td>
+              <tr key={row.id_transaksi} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40 ${
+                i % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/40 dark:bg-slate-700/20"
+              }`}>
+                <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{fmtDate(row.waktu_transaksi)}</td>
+                <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300 font-mono text-xs">#{row.id_transaksi}</td>
+                <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300">{row.metode_pembayaran}</td>
+                <td className="px-5 py-3.5 text-slate-800 dark:text-slate-100 font-semibold">{fmt(row.nominal)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {!isLoading && rows.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 flex justify-between text-xs text-slate-400">
+          <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-between text-xs text-slate-400 dark:text-slate-500">
             <span>{rows.length} transaksi ditemukan</span>
             <span>Total: {fmt(totalPendapatan)}</span>
           </div>
