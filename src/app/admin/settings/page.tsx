@@ -10,10 +10,12 @@ import {
   HiGlobeAlt,
   HiArrowRightOnRectangle,
   HiCheckCircle,
+  HiExclamationCircle,
   HiTrash,
   HiWrenchScrewdriver,
 } from "react-icons/hi2";
 import AdminHeader from "../../../components/admin/AdminHeader";
+import { clearAppCache, toggleMaintenanceMode } from "../../admin/actions";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -62,16 +64,19 @@ const dummySessions: SessionDevice[] = [
 function Toggle({
   checked,
   onChange,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       role="switch"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/40 ${
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#4A81D4]/40 disabled:opacity-50 disabled:cursor-not-allowed ${
         checked ? "bg-[#4A81D4]" : "bg-slate-200"
       }`}
     >
@@ -86,15 +91,27 @@ function Toggle({
 
 // ─── Toast ─────────────────────────────────────────────────────────────────
 
-function Toast({ message, onDone }: { message: string; onDone: () => void }) {
-  useState(() => {
+interface ToastProps {
+  message: string;
+  type: "success" | "error";
+  onDone: () => void;
+}
+
+function Toast({ message, type, onDone }: ToastProps) {
+  useEffect(() => {
     const t = setTimeout(onDone, 3000);
     return () => clearTimeout(t);
-  });
+  }, [onDone]);
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-white border border-emerald-200 shadow-lg rounded-xl px-4 py-3">
-      <HiCheckCircle className="text-emerald-500 text-xl flex-shrink-0" />
-      <p className="text-sm font-medium text-slate-700">{message}</p>
+    <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-white dark:bg-slate-800 border shadow-lg rounded-xl px-4 py-3 ${
+      type === "success" ? "border-emerald-200 dark:border-emerald-700" : "border-red-200 dark:border-red-700"
+    }`}>
+      {type === "success"
+        ? <HiCheckCircle className="text-emerald-500 text-xl flex-shrink-0" />
+        : <HiExclamationCircle className="text-red-500 text-xl flex-shrink-0" />
+      }
+      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{message}</p>
     </div>
   );
 }
@@ -112,18 +129,52 @@ export default function SettingsPage() {
 
   // Data Management
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [cacheCleared, setCacheCleared] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [isUpdatingMaintenance, setIsUpdatingMaintenance] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error") =>
+    setToast({ message, type });
 
   const handleLogoutDevice = (id: number) => {
     setSessions((prev) => prev.filter((s) => s.id !== id));
-    setToast("Berhasil logout dari perangkat tersebut.");
+    showToast("Berhasil logout dari perangkat tersebut.", "success");
   };
 
-  const handleClearCache = () => {
-    setCacheCleared(true);
-    setToast("Cache berhasil dihapus.");
-    setTimeout(() => setCacheCleared(false), 3000);
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      const result = await clearAppCache();
+      if (result.success) {
+        showToast("Cache berhasil di-revalidate.", "success");
+      } else {
+        showToast(result.error ?? "Gagal menghapus cache.", "error");
+      }
+    } catch {
+      showToast("Terjadi kesalahan saat menghapus cache.", "error");
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const handleToggleMaintenance = async (value: boolean) => {
+    setIsUpdatingMaintenance(true);
+    try {
+      const result = await toggleMaintenanceMode(value);
+      if (result.success) {
+        setMaintenanceMode(value);
+        showToast(
+          value ? "Maintenance mode diaktifkan." : "Maintenance mode dinonaktifkan.",
+          "success"
+        );
+      } else {
+        showToast(result.error ?? "Gagal memperbarui maintenance mode.", "error");
+      }
+    } catch {
+      showToast("Terjadi kesalahan saat memperbarui maintenance mode.", "error");
+    } finally {
+      setIsUpdatingMaintenance(false);
+    }
   };
 
   const themeOptions: { value: Theme; label: string; icon: React.ElementType; desc: string }[] = [
@@ -139,7 +190,7 @@ export default function SettingsPage() {
         subtitle="Manage appearance, sessions, and system configurations"
       />
 
-      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700">
 
@@ -262,9 +313,13 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                 <span className={`text-xs font-semibold ${maintenanceMode ? "text-amber-500" : "text-slate-400 dark:text-slate-500"}`}>
-                  {maintenanceMode ? "Aktif" : "Nonaktif"}
+                  {isUpdatingMaintenance ? "Memperbarui..." : maintenanceMode ? "Aktif" : "Nonaktif"}
                 </span>
-                <Toggle checked={maintenanceMode} onChange={setMaintenanceMode} />
+                <Toggle
+                  checked={maintenanceMode}
+                  onChange={handleToggleMaintenance}
+                  disabled={isUpdatingMaintenance}
+                />
               </div>
             </div>
 
@@ -278,11 +333,11 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={handleClearCache}
-                disabled={cacheCleared}
+                disabled={isClearingCache}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ml-4"
               >
                 <HiTrash className="text-base" />
-                {cacheCleared ? "Cache Dihapus" : "Hapus Cache"}
+                {isClearingCache ? "Menghapus..." : "Hapus Cache"}
               </button>
             </div>
           </div>
