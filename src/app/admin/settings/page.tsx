@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   HiComputerDesktop,
@@ -15,49 +16,44 @@ import {
   HiWrenchScrewdriver,
 } from "react-icons/hi2";
 import AdminHeader from "../../../components/admin/AdminHeader";
-import { clearAppCache, toggleMaintenanceMode } from "../../admin/actions";
+import {
+  clearAppCache,
+  toggleMaintenanceMode,
+  getAdminSessions,
+  deleteAdminSession,
+  type AdminSession,
+} from "../../admin/actions";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 type Theme = "light" | "dark" | "system";
 
-interface SessionDevice {
-  id: number;
-  browser: string;
-  os: string;
-  location: string;
-  lastActive: string;
-  isCurrent: boolean;
+// ─── Helper: Parse User-Agent ──────────────────────────────────────────────
+
+function parseUserAgent(ua: string): string {
+  if (!ua) return "Unknown Device";
+
+  // Deteksi Browser
+  let browser = "Unknown Browser";
+  if (/Edg\//i.test(ua))          browser = "Edge";
+  else if (/OPR\//i.test(ua))     browser = "Opera";
+  else if (/Chrome\//i.test(ua))  browser = "Chrome";
+  else if (/Firefox\//i.test(ua)) browser = "Firefox";
+  else if (/Safari\//i.test(ua))  browser = "Safari";
+
+  // Deteksi OS
+  let os = "Unknown OS";
+  if (/iPhone|iPad/i.test(ua))    os = "iOS";
+  else if (/Android/i.test(ua))   os = "Android";
+  else if (/Windows/i.test(ua))   os = "Windows";
+  else if (/Mac OS X/i.test(ua))  os = "macOS";
+  else if (/Linux/i.test(ua))     os = "Linux";
+
+  if (browser === "Unknown Browser" && os === "Unknown OS") return "Unknown Device";
+  if (browser === "Unknown Browser") return os;
+  if (os === "Unknown OS") return browser;
+  return `${browser} on ${os}`;
 }
-
-// ─── Dummy Data ────────────────────────────────────────────────────────────
-
-const dummySessions: SessionDevice[] = [
-  {
-    id: 1,
-    browser: "Chrome 124",
-    os: "Windows 11",
-    location: "Yogyakarta, ID",
-    lastActive: "Saat ini",
-    isCurrent: true,
-  },
-  {
-    id: 2,
-    browser: "Safari 17",
-    os: "iPhone 15",
-    location: "Jakarta, ID",
-    lastActive: "3 jam lalu",
-    isCurrent: false,
-  },
-  {
-    id: 3,
-    browser: "Firefox 125",
-    os: "macOS Sonoma",
-    location: "Bandung, ID",
-    lastActive: "Kemarin, 14:22",
-    isCurrent: false,
-  },
-];
 
 // ─── Toggle Switch ─────────────────────────────────────────────────────────
 
@@ -119,13 +115,50 @@ function Toast({ message, type, onDone }: ToastProps) {
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const router = useRouter();
+
   // Appearance — real theme via next-themes
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Sessions
-  const [sessions, setSessions] = useState<SessionDevice[]>(dummySessions);
+  // Sessions — real data dari Supabase
+  const [sessions, setSessions] = useState<AdminSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
+
+  const fetchSessions = useCallback(async (username: string) => {
+    setSessionsLoading(true);
+    const result = await getAdminSessions(username);
+    if (result.success && result.data) setSessions(result.data);
+    setSessionsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const username = localStorage.getItem("admin_session");
+    const token = localStorage.getItem("admin_session_token");
+    setCurrentToken(token);
+    if (username) fetchSessions(username);
+  }, [fetchSessions]);
+
+  const handleLogoutDevice = async (token: string) => {
+    const result = await deleteAdminSession(token);
+    if (!result.success) {
+      showToast(result.error ?? "Gagal menghapus sesi.", "error");
+      return;
+    }
+
+    // Jika yang dihapus adalah sesi perangkat ini sendiri → paksa logout
+    if (token === currentToken) {
+      localStorage.removeItem("admin_session");
+      localStorage.removeItem("admin_session_token");
+      router.push("/admin/login");
+      return;
+    }
+
+    setSessions((prev) => prev.filter((s) => s.token !== token));
+    showToast("Sesi perangkat berhasil dihapus.", "success");
+  };
 
   // Data Management
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -135,11 +168,6 @@ export default function SettingsPage() {
 
   const showToast = (message: string, type: "success" | "error") =>
     setToast({ message, type });
-
-  const handleLogoutDevice = (id: number) => {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    showToast("Berhasil logout dari perangkat tersebut.", "success");
-  };
 
   const handleClearCache = async () => {
     setIsClearingCache(true);
@@ -242,52 +270,70 @@ export default function SettingsPage() {
           </p>
 
           <div className="space-y-3">
-            {sessions.length === 0 ? (
-              <p className="text-sm text-slate-400 py-4 text-center">Tidak ada sesi aktif lainnya.</p>
+            {sessionsLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((n) => (
+                  <div key={n} className="h-16 rounded-xl bg-slate-100 dark:bg-slate-700 animate-pulse" />
+                ))}
+              </div>
+            ) : sessions.length === 0 ? (
+              <p className="text-sm text-slate-400 py-4 text-center">Tidak ada sesi aktif.</p>
             ) : (
-              sessions.map((s) => (
-                <div
-                  key={s.id}
-                  className={`flex items-center justify-between p-4 rounded-xl border ${
-                    s.isCurrent
-                      ? "border-[#4A81D4]/30 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-700/30"
-                      : "border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/30"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      s.isCurrent ? "bg-[#4A81D4]/10 dark:bg-blue-900/30" : "bg-slate-100 dark:bg-slate-700"
-                    }`}>
-                      {s.os.includes("iPhone") || s.os.includes("Android") ? (
-                        <HiDevicePhoneMobile className={`text-lg ${s.isCurrent ? "text-[#4A81D4]" : "text-slate-400 dark:text-slate-500"}`} />
-                      ) : (
-                        <HiComputerDesktop className={`text-lg ${s.isCurrent ? "text-[#4A81D4]" : "text-slate-400 dark:text-slate-500"}`} />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{s.browser} · {s.os}</p>
-                        {s.isCurrent && (
-                          <span className="text-xs font-medium bg-[#4A81D4] text-white px-2 py-0.5 rounded-full">
-                            Saat ini
-                          </span>
+              sessions.map((s) => {
+                const isCurrent = s.token === currentToken;
+                const ua = s.user_agent ?? "";
+                const isMobile = /iPhone|Android|Mobile/i.test(ua);
+                const loginTime = new Date(s.last_active).toLocaleString("id-ID", {
+                  day: "2-digit", month: "short", year: "numeric",
+                  hour: "2-digit", minute: "2-digit",
+                });
+
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex items-center justify-between p-4 rounded-xl border ${
+                      isCurrent
+                        ? "border-[#4A81D4]/30 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-700/30"
+                        : "border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/30"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        isCurrent ? "bg-[#4A81D4]/10 dark:bg-blue-900/30" : "bg-slate-100 dark:bg-slate-700"
+                      }`}>
+                        {isMobile ? (
+                          <HiDevicePhoneMobile className={`text-lg ${isCurrent ? "text-[#4A81D4]" : "text-slate-400 dark:text-slate-500"}`} />
+                        ) : (
+                          <HiComputerDesktop className={`text-lg ${isCurrent ? "text-[#4A81D4]" : "text-slate-400 dark:text-slate-500"}`} />
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{s.location} · {s.lastActive}</p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[220px]" title={ua}>
+                            {parseUserAgent(ua)}
+                          </p>
+                          {isCurrent && (
+                            <span className="text-xs font-medium bg-[#4A81D4] text-white px-2 py-0.5 rounded-full flex-shrink-0">
+                              Saat ini
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                          Login: {loginTime}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  {!s.isCurrent && (
                     <button
-                      onClick={() => handleLogoutDevice(s.id)}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-white hover:bg-red-500 border border-red-200 dark:border-red-500/40 hover:border-transparent px-3 py-1.5 rounded-lg transition-all dark:text-red-400 dark:hover:bg-red-600"
+                      onClick={() => handleLogoutDevice(s.token)}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-white hover:bg-red-500 border border-red-200 dark:border-red-500/40 hover:border-transparent px-3 py-1.5 rounded-lg transition-all dark:text-red-400 dark:hover:bg-red-600 flex-shrink-0 ml-3"
                     >
                       <HiArrowRightOnRectangle className="text-sm" />
-                      Logout
+                      {isCurrent ? "Logout" : "Hapus Sesi"}
                     </button>
-                  )}
-                </div>
-              ))
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

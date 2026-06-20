@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAdminPath       = pathname.startsWith("/admin");
@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Jalankan middleware hanya pada rute yang relevan.
+     * Jalankan proxy hanya pada rute yang relevan.
      * Kecualikan: aset statis Next.js, gambar, font, favicon, file publik.
      */
     "/((?!_next/static|_next/image|favicon\\.ico|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.webp$|.*\\.ico$|.*\\.js$|.*\\.css$).*)",

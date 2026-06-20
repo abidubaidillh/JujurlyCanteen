@@ -7,6 +7,7 @@ import { z } from "zod";
 import { supabase } from "../../scan/supabase-logic";
 import { HiUser, HiLockClosed, HiEye, HiEyeSlash } from "react-icons/hi2";
 import Mascot_Login from "../../../components/ui/Mascot_Login";
+import { createAdminSession } from "../actions";
 
 // ─── Zod Schema ────────────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -62,7 +63,19 @@ export default function AdminLoginPage() {
         return;
       }
 
+      // Generate token sesi unik dan catat perangkat
+      const sessionToken = crypto.randomUUID();
+      const userAgent = navigator.userAgent;
+
+      // Fire-and-forget — jangan blokir redirect jika gagal
+      createAdminSession({
+        username: result.data.username,
+        token: sessionToken,
+        userAgent,
+      }).catch(() => {});
+
       localStorage.setItem("admin_session", result.data.username);
+      localStorage.setItem("admin_session_token", sessionToken);
       router.push("/admin/dashboard");
     } catch (err: unknown) {
       setErrorMsg(
