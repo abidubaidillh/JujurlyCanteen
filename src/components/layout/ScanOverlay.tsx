@@ -7,6 +7,7 @@ interface PhoneBoxType {
   h: number;
   confidence?: number;
   isTolerating?: boolean;
+  status?: "phone_detected" | "unknown_object" | string;
 }
 
 export const ScanOverlay = ({
