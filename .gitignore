@@ -47,6 +47,19 @@ ai-detector/debug_frames/
 output/
 debug_frames/
 
+# Python cache — never commit compiled bytecode
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+
+# Python virtual environments
+ai-detector/venv/
+ai-detector/.venv/
+ai-detector/env/
+
+# NOTE: *.pt (YOLO model files) are intentionally NOT excluded
+# yolov8n.pt must be committed to the repo for Render deployment
+
 .kiro/
 .vscode/
- ai-detector/app/services/__pycache__/supabase_service.cpython-314.pyc

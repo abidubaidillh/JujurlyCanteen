@@ -8,8 +8,8 @@ from supabase import create_client, Client
 # INIT SUPABASE CLIENT (TETAP SAMA)
 # ============================================================
 
-SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://wwovpyyynxpyrvljadtk.supabase.co"
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3b3ZweXl5bnhweXJ2bGphZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNTYwNjAsImV4cCI6MjA5MTgzMjA2MH0.17vqZxZg6zjM_gVmCdSSBl30mJmHNAkHJummlQU8YOI"
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
