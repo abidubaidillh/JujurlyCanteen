@@ -7,19 +7,19 @@ app = FastAPI(title="Payment Detector API")
 
 # ============================================================
 # CORS
-# Set ALLOWED_ORIGINS di .env.local, pisahkan dengan koma.
-# Contoh: ALLOWED_ORIGINS=http://localhost:3000,https://jujurly.com
-# Jika tidak diset → fallback ke localhost:3000 saja (bukan wildcard).
+# Set ALLOWED_ORIGINS di environment variable, pisahkan dengan koma.
+# Contoh: ALLOWED_ORIGINS=http://localhost:3000,https://jujurly-canteen.vercel.app
+# Jika tidak diset → fallback ke wildcard "*" agar tidak memblokir apapun.
 # ============================================================
-_raw = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
-ALLOWED_ORIGINS = [o.strip() for o in _raw.split(",") if o.strip()]
+origins_env = os.environ.get("ALLOWED_ORIGINS", "")
+origins_list = [origin.strip() for origin in origins_env.split(",") if origin.strip()] if origins_env else ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=origins_list,
     allow_credentials=True,
-    allow_methods=["POST", "GET"],
-    allow_headers=["Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(payment_router)
