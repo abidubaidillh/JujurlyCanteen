@@ -11,26 +11,13 @@ export const supabase = createBrowserClient(
 
 // ============================================================
 // MODULE 1: SCAN MANUAL (Dari Browser)
-// SKPL-F-001: Upload bukti ke Storage
-// SKPL-F-005: Simpan transaksi ke Database
 // ============================================================
-
-/**
- * Mengunggah blob gambar dari kamera browser ke Supabase Storage,
- * lalu menyimpan data transaksi dan bukti pembayaran ke database.
- *
- * Status transaksi diatur berdasarkan hasil OCR:
- * - isSuccess=true  → status_validasi="Valid",   status bukti="valid"
- * - isSuccess=false → status_validasi="Pending",  status bukti="invalid"
- */
 export const uploadAndSaveTransaction = async (
   blob: Blob,
   amount?: number | null
 ) => {
-  // Simpan langsung di root bucket tanpa folder 'public/'
   const fileName = `bukti_${Date.now()}.png`;
 
-  // 1. Upload gambar ke Supabase Storage (bucket: bukti-transfer)
   const { data: storageData, error: storageError } = await supabase.storage
     .from("bukti-transfer")
     .upload(fileName, blob, { contentType: "image/png", upsert: false });
@@ -40,8 +27,6 @@ export const uploadAndSaveTransaction = async (
     throw storageError;
   }
 
-  // 2. Simpan transaksi ke tabel 'transaksi'
-  // Nominal default = 1 agar tidak melanggar constraint NOT NULL / positif
   const nominalValue = amount && amount > 0 ? amount : 1;
   const validasiStatus = amount && amount > 0 ? "Valid" : "Pending";
 
@@ -60,8 +45,6 @@ export const uploadAndSaveTransaction = async (
     throw transError;
   }
 
-  // 3. Simpan detail bukti ke tabel 'bukti_pembayaran'
-  // status: "valid" / "invalid" → sesuai Check Constraint bukti_pembayaran_status_check
   const buktiStatus = amount && amount > 0 ? "valid" : "invalid";
 
   const { error: detailError } = await supabase
@@ -80,25 +63,22 @@ export const uploadAndSaveTransaction = async (
   return transData;
 };
 
-/**
- * Menghapus file gambar dari Supabase Storage jika OCR gagal mendeteksi nominal
- */
 export const deleteBuktiFile = async (idBukti: number | string) => {
   try {
+    // FIX 1: maybeSingle() — tidak crash jika 0 row
     const { data: buktiData } = await supabase
       .from("bukti_pembayaran")
       .select("file_gambar")
       .eq("id_bukti", idBukti)
-      .single();
+      .maybeSingle();
 
-    if (buktiData && buktiData.file_gambar) {
+    if (buktiData?.file_gambar) {
       const { error } = await supabase.storage
         .from("bukti-transfer")
         .remove([buktiData.file_gambar]);
-        
+
       if (error) {
         console.error("⚠️ [Supabase] Gagal menghapus file:", error.message);
-      } else {
       }
     }
   } catch (err) {
@@ -109,37 +89,17 @@ export const deleteBuktiFile = async (idBukti: number | string) => {
 // ============================================================
 // MODULE 2: SUPABASE STORAGE HELPER
 // ============================================================
-
-/**
- * Mengonversi path relatif (misal: "bukti_123.png")
- * menjadi URL publik penuh untuk diunduh oleh OCR engine.
- */
 export const getPublicImageUrl = (filePath: string): string => {
-  // Bersihkan dari potensi folder 'public/' (jika ada data lama) dan slash ganda
-  const cleanPath = filePath.replace(/^public\//, '').replace(/^\/+/, '');
-  
+  const cleanPath = filePath.replace(/^public\//, "").replace(/^\/+/, "");
   const { data } = supabase.storage
     .from("bukti-transfer")
     .getPublicUrl(cleanPath);
-
   return data.publicUrl;
 };
 
 // ============================================================
-// MODULE 3: OCR RESULT HANDLER (Untuk Auto-Scan / Realtime)
-// Dipanggil setelah Next.js selesai memproses gambar dari Python
+// MODULE 3: OCR RESULT HANDLER
 // ============================================================
-
-/**
- * Menyimpan hasil OCR ke tabel `hasil_ocr`.
- * Selalu dipanggil terlepas dari apakah OCR berhasil atau gagal.
- *
- * @param idBukti  - FK ke tabel bukti_pembayaran
- * @param teksOcr  - Teks mentah hasil ekstraksi OCR
- * @param nominal  - Nominal yang berhasil diekstrak, null jika gagal
- *
- * Requirements: 4.3, 4.4
- */
 export const saveOCRResult = async (
   idBukti: number | string,
   teksOcr: string,
@@ -164,15 +124,6 @@ export const saveOCRResult = async (
   return data;
 };
 
-/**
- * Memperbarui field `status` pada tabel `bukti_pembayaran`.
- * Status 'valid' jika nominal terdeteksi, 'invalid' jika tidak.
- *
- * @param idBukti - FK ke tabel bukti_pembayaran
- * @param status  - 'valid' atau 'invalid'
- *
- * Requirements: 3.2, 4.5
- */
 export const updateBuktiStatus = async (
   idBukti: number | string,
   status: "valid" | "invalid" | "pending"
@@ -190,35 +141,47 @@ export const updateBuktiStatus = async (
   return data;
 };
 
-/**
- * Memperbarui tabel transaksi dan bukti_pembayaran sekaligus
- * dipanggil ketika OCR menemukan nominal.
- */
 export const updateTransactionFromOCR = async (
   idBukti: number | string,
   amount: number,
   merchantName: string | null,
   transactionDate?: Date | null
 ) => {
-  // 1. Dapatkan id_transaksi dari bukti
+  // ============================================================
+  // FIX 2: Guard — tolak idBukti yang tidak valid sebelum query
+  // Mencegah .eq("id_bukti", 0/undefined/"") match ke banyak row
+  // ============================================================
+  if (!idBukti || Number(idBukti) <= 0) {
+    console.error("[Supabase] updateTransactionFromOCR dipanggil dengan idBukti tidak valid:", idBukti);
+    return;
+  }
+
+  // ============================================================
+  // FIX 3: maybeSingle() — tidak crash meski 0 atau >1 row
+  // Ditambah .order() untuk ambil row terbaru jika ada duplikat
+  // ============================================================
   const { data: buktiData, error: buktiErr } = await supabase
     .from("bukti_pembayaran")
     .select("id_transaksi")
     .eq("id_bukti", idBukti)
-    .single();
+    .order("waktu_capture", { ascending: false })
+    .maybeSingle();
 
-  if (buktiErr || !buktiData) {
-    console.error("[Supabase] Gagal fetch id_transaksi:", buktiErr?.message);
+  if (buktiErr) {
+    console.error("[Supabase] Gagal fetch id_transaksi:", buktiErr.message);
+    return;
+  }
+
+  if (!buktiData) {
+    console.error("[Supabase] Tidak ditemukan bukti_pembayaran untuk id_bukti:", idBukti);
     return;
   }
 
   const isStrictMerchantValid = merchantName === "HMIT STORE ITS";
 
-  // Validasi selisih waktu maksimal 5 menit
   const timeValidation = validateTransactionDate(transactionDate ?? null, 5);
   const isTimeValid = timeValidation.isValid;
 
-  // Status Valid hanya jika merchant benar DAN waktu dalam 5 menit
   let validasiStatus: "Valid" | "Pending" | "Invalid";
   if (!isStrictMerchantValid) {
     validasiStatus = "Pending";
@@ -233,7 +196,7 @@ export const updateTransactionFromOCR = async (
   let idTransaksi = buktiData.id_transaksi;
 
   if (!idTransaksi) {
-    // 2A. Jika id_transaksi masih null (Auto-Capture), BUAT transaksi baru
+    // Auto-Capture: buat transaksi baru
     const { data: newTrans, error: createErr } = await supabase
       .from("transaksi")
       .insert([{
@@ -251,42 +214,37 @@ export const updateTransactionFromOCR = async (
 
     idTransaksi = newTrans.id_transaksi;
 
-    // Tautkan id_transaksi ke tabel bukti_pembayaran
     await supabase
       .from("bukti_pembayaran")
       .update({ id_transaksi: idTransaksi })
       .eq("id_bukti", idBukti);
 
   } else {
-    // 2B. Jika id_transaksi sudah ada, UPDATE nominal dan status
+    // Scan manual: update nominal dan status
     const { error: transErr } = await supabase
       .from("transaksi")
       .update({
         nominal: amount,
-        status_validasi: validasiStatus
+        status_validasi: validasiStatus,
       })
       .eq("id_transaksi", idTransaksi);
 
     if (transErr) {
       console.error("[Supabase] Gagal update transaksi nominal:", transErr.message);
-    } else {
     }
   }
 
-  // 3. Update status bukti_pembayaran
   await updateBuktiStatus(idBukti, buktiStatus);
 
-  // 4. Kirim notifikasi ke log_notifikasi jika transaksi Invalid
   if (validasiStatus === "Invalid") {
-    const alasan = timeValidation && !timeValidation.isValid
+    const alasan = !timeValidation.isValid
       ? timeValidation.reason
       : "Transaksi tidak memenuhi syarat validasi.";
     await supabase.from("log_notifikasi").insert([{
-      pesan:    `Transaksi Invalid — ${alasan}`,
-      read:  false,
+      pesan: `Transaksi Invalid — ${alasan}`,
+      read: false,
     }]);
   }
 
   return { validasiStatus, timeValidation };
 };
-
