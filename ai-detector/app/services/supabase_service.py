@@ -2,22 +2,23 @@
 
 import os
 import time
+import mimetypes
+from dotenv import load_dotenv
 from supabase import create_client, Client
 
-# Env sudah di-load oleh run.py sebelum modul ini diimport.
-# Tidak perlu load_dotenv() lagi di sini.
 
-SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+load_dotenv()
+
+
+SUPABASE_URL = ( os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL"))
+
+SUPABASE_KEY = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY"))
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError(
-        "Supabase env belum dikonfigurasi. "
-        "Pastikan SUPABASE_URL (atau NEXT_PUBLIC_SUPABASE_URL) "
-        "dan SUPABASE_SERVICE_ROLE_KEY ada di .env.local"
-    )
+    raise RuntimeError("Supabase env belum dikonfigurasi")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 _BUCKET = "bukti-transfer"
 
 

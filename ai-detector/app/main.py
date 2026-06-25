@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.payment import router as payment_router
 
-app = FastAPI(title="Payment Detector API")
+app = FastAPI(title="AI Payment Detector")
 
 # ============================================================
 # CORS
@@ -12,7 +12,11 @@ app = FastAPI(title="Payment Detector API")
 # Jika tidak diset → fallback ke wildcard "*" agar tidak memblokir apapun.
 # ============================================================
 origins_env = os.environ.get("ALLOWED_ORIGINS", "")
-origins_list = [origin.strip() for origin in origins_env.split(",") if origin.strip()] if origins_env else ["*"]
+origins_list = (
+    [origin.strip() for origin in origins_env.split(",") if origin.strip()]
+    if origins_env
+    else ["*"]
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,3 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(payment_router)
+
+@app.get("/")
+def root():
+    return {"status": "running"}
